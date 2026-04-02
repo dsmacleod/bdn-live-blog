@@ -279,6 +279,17 @@ class BDN_Liveblog_API {
             return new WP_Error( 'not_found', 'Entry not found.', [ 'status' => 404 ] );
         }
 
+        $throttle_key = 'bdn_lb_slug_regen_' . $post->ID;
+        if ( get_transient( $throttle_key ) ) {
+            return new WP_REST_Response( [
+                'id'        => $post->ID,
+                'seo_slug'  => get_post_meta( $post->ID, '_bdn_lb_seo_slug', true ),
+                'entry_url' => BDN_Liveblog_Slug::get_entry_url( $post->ID, $post->post_content, get_the_title( $post ) ),
+                'throttled' => true,
+            ], 200 );
+        }
+        set_transient( $throttle_key, 1, 30 );
+
         $new_slug = BDN_Liveblog_Slug::regenerate_slug(
             $post->ID,
             $post->post_content,
