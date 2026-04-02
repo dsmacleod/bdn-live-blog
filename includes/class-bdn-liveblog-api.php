@@ -164,12 +164,29 @@ class BDN_Liveblog_API {
         return $content;
     }
 
+    private static function entries_cache_key( int $post_id, int $page ): string {
+        return "bdn_lb_entries_{$post_id}_{$page}";
+    }
+
+    private static function bust_entries_cache( int $post_id ) {
+        for ( $i = 1; $i <= 10; $i++ ) {
+            delete_transient( self::entries_cache_key( $post_id, $i ) );
+        }
+    }
+
     // ── GET /entries ───────────────────────────────────────────────────────────
 
     public static function get_entries( WP_REST_Request $req ) {
         $post_id = $req->get_param( 'post_id' );
         $after   = $req->get_param( 'after' );
         $page    = max( 1, $req->get_param( 'page' ) );
+
+        if ( $after == 0 ) {
+            $cached = get_transient( self::entries_cache_key( $post_id, $page ) );
+            if ( $cached !== false ) {
+                return new WP_REST_Response( $cached, 200 );
+            }
+        }
 
         $args = [
             'post_type'      => BDN_Liveblog_Post_Type::CPT,
@@ -192,11 +209,17 @@ class BDN_Liveblog_API {
         $query   = new WP_Query( $args );
         $entries = array_map( [ __CLASS__, 'format_entry' ], $query->posts );
 
-        return new WP_REST_Response( [
+        $response_data = [
             'entries'     => $entries,
             'total'       => (int) $query->found_posts,
             'total_pages' => (int) $query->max_num_pages,
-        ], 200 );
+        ];
+
+        if ( $after == 0 ) {
+            set_transient( self::entries_cache_key( $post_id, $page ), $response_data, 30 );
+        }
+
+        return new WP_REST_Response( $response_data, 200 );
     }
 
     // ── GET /entries/{id} ──────────────────────────────────────────────────────
@@ -239,6 +262,7 @@ class BDN_Liveblog_API {
 
         // Touch the parent post so caches know to refresh
         wp_update_post( [ 'ID' => $post_id, 'post_modified' => current_time( 'mysql' ) ] );
+        self::bust_entries_cache( $post_id );
 
         return new WP_REST_Response( self::format_entry( get_post( $entry_id ) ), 201 );
     }
@@ -256,6 +280,8 @@ class BDN_Liveblog_API {
         if ( $req->get_param( 'content' ) ) $update['post_content'] = $req->get_param( 'content' );
 
         wp_update_post( $update );
+        $parent_id = (int) get_post_meta( $post->ID, '_bdn_lb_parent_post', true );
+        if ( $parent_id ) self::bust_entries_cache( $parent_id );
         if ( $req->get_param( 'byline' ) )        update_post_meta( $post->ID, '_bdn_lb_byline',        $req->get_param( 'byline' ) );
         if ( $req->get_param( 'label' ) )          update_post_meta( $post->ID, '_bdn_lb_label',         $req->get_param( 'label' ) );
         // image_id of 0 means "remove image"
@@ -310,6 +336,8 @@ class BDN_Liveblog_API {
         if ( ! $post || $post->post_type !== BDN_Liveblog_Post_Type::CPT ) {
             return new WP_Error( 'not_found', 'Entry not found.', [ 'status' => 404 ] );
         }
+        $parent_id = (int) get_post_meta( $post->ID, '_bdn_lb_parent_post', true );
+        if ( $parent_id ) self::bust_entries_cache( $parent_id );
         wp_delete_post( $post->ID, true );
         return new WP_REST_Response( [ 'deleted' => true ], 200 );
     }
