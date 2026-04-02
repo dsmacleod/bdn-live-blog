@@ -927,3 +927,60 @@
 /* Pin action button */
 .bdn-lbc__act--pin { color: var(--lb-muted); }
 .bdn-lbc__act--pin.bdn-lbc__act--pinned { color: var(--lb-text); font-weight: 900; }
+
+/* ══ Mobile ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Reader entries — stack, hide time column */
+  .bdn-lb-entry {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .bdn-lb-time-col {
+    display: none;
+  }
+
+  /* Composer split rows — stack */
+  .bdn-lbc__form-row--split {
+    grid-template-columns: 1fr;
+  }
+  .bdn-lbc__form-row--split .bdn-lbc__input {
+    max-width: none !important;
+  }
+
+  /* Composer header — wrap */
+  .bdn-lbc__header {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  /* Entry footer — tighter on mobile */
+  .bdn-lb-entry-footer {
+    gap: 0.4rem;
+  }
+
+  /* Standalone entry page */
+  .bdn-lb-entry-page__inner {
+    padding: 1rem 0.75rem 2rem;
+  }
+  .bdn-lb-entry-page__title {
+    font-size: 1.5rem;
+  }
+  .bdn-lb-entry-page__footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bdn-lb-entry-page__share {
+    margin-left: 0;
+  }
+
+  /* Toolbar — wrap buttons */
+  .bdn-lbc__toolbar {
+    gap: 1px;
+  }
+
+  /* Link/image bars — stack */
+  .bdn-lbc__link-bar,
+  .bdn-lbc__img-bar {
+    flex-wrap: wrap;
+  }
+}
