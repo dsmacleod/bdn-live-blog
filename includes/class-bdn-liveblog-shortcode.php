@@ -29,6 +29,7 @@ class BDN_Liveblog_Shortcode {
                 <span class="bdn-lb-badge" aria-hidden="true"></span>
                 <span class="bdn-lb-status-text">Loading&hellip;</span>
                 <span class="bdn-lb-last-updated"></span>
+                <span class="bdn-lb-conn-error" style="display:none"></span>
             </div>
 
             <div class="bdn-lb-entries" role="feed">

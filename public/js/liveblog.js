@@ -44,6 +44,8 @@
     const loadMoreBtn = widget.querySelector('.bdn-lb-load-more');
 
     let latestTimestamp = 0, currentPage = 1, totalPages = 1, pollTimer = null;
+    let pollFailures = 0;
+    const connErrorEl = widget.querySelector('.bdn-lb-conn-error');
 
     fetchStatus();
     fetchEntries(1, true);
@@ -74,13 +76,25 @@
       }).catch(()=>{ if(initial) entriesEl.innerHTML='<p class="bdn-lb-empty">Could not load entries.</p>'; });
     }
 
-    function schedulePoll() { clearTimeout(pollTimer); pollTimer = setTimeout(pollForNew, POLL); }
+    function schedulePoll() {
+      clearTimeout(pollTimer);
+      const delay = Math.min(POLL * Math.pow(2, pollFailures), 120000);
+      pollTimer = setTimeout(pollForNew, delay);
+    }
     function pollForNew() {
       api(`entries?post_id=${postId}&after=${latestTimestamp}`).then(data => {
+        pollFailures = 0;
+        if (connErrorEl) { connErrorEl.style.display = 'none'; connErrorEl.textContent = ''; }
         (data.entries||[]).forEach(e => { if(e.timestamp>latestTimestamp) latestTimestamp=e.timestamp; prependEntry(e); });
         updatedEl.textContent = 'Updated '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
         fetchStatus();
-      }).catch(()=>{}).finally(schedulePoll);
+      }).catch(() => {
+        pollFailures++;
+        if (connErrorEl) {
+          connErrorEl.style.display = '';
+          connErrorEl.textContent = 'Connection lost. Retrying…';
+        }
+      }).finally(schedulePoll);
     }
 
     loadMoreBtn && loadMoreBtn.addEventListener('click', () => {

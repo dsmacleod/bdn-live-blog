@@ -252,6 +252,16 @@
   color: var(--lb-muted);
 }
 
+/* ── Connection error ─────────────────────────────────────────────────────── */
+.bdn-lb-conn-error {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  color: var(--lb-muted);
+  text-align: center;
+  padding: 0.4rem 0;
+  font-style: italic;
+}
+
 /* ══ Standalone entry page ══════════════════════════════════════════════════── */
 .bdn-lb-entry-page__inner {
   max-width: 740px;
