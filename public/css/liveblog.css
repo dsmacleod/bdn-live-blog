@@ -928,6 +928,45 @@
 .bdn-lbc__act--pin { color: var(--lb-muted); }
 .bdn-lbc__act--pin.bdn-lbc__act--pinned { color: var(--lb-text); font-weight: 900; }
 
+/* ── Embeds in entries ────────────────────────────────────────────────────── */
+.bdn-lb-content iframe,
+.bdn-lb-entry-page__content iframe {
+  max-width: 100%;
+  border: 0;
+}
+.bdn-lb-content .wp-block-embed,
+.bdn-lb-content .embed-wrap {
+  margin: 0.75rem 0;
+}
+/* Composer embed preview */
+.bdn-lbc__embed-preview {
+  border: 1px solid var(--lb-border);
+  border-radius: 0;
+  padding: 0.5rem;
+  margin: 6px 0;
+  background: #f9f9f9;
+  position: relative;
+  user-select: none;
+}
+.bdn-lbc__embed-preview iframe { max-width: 100%; }
+.bdn-lbc__embed-preview__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--lb-text);
+  color: #fff;
+  border: none;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bdn-lbc__embed-preview__remove:hover { background: var(--lb-red); }
+
 /* ══ Mobile ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   /* Reader entries — stack, hide time column */

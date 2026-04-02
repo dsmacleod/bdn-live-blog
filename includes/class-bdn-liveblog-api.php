@@ -155,6 +155,10 @@ class BDN_Liveblog_API {
      * and the liveblog auto-inject filter, all of which hang or bloat the API.
      */
     public static function render_entry_content( string $raw ): string {
+        global $wp_embed;
+        if ( $wp_embed ) {
+            $raw = $wp_embed->autoembed( $raw );
+        }
         $content = wptexturize( $raw );
         $content = wpautop( $content );
         $content = shortcode_unautop( $content );

@@ -473,6 +473,68 @@
 
   bindToolbar();
 
+  // ── Embed auto-detection ──────────────────────────────────────────────────
+  (function initEmbedDetection() {
+    const editor = document.getElementById('bdn-lbc-content');
+    if (!editor) return;
+
+    const OEMBED_REGEX = /^(https?:\/\/\S+)$/;
+
+    editor.addEventListener('paste', async (e) => {
+      const text = (e.clipboardData || window.clipboardData)?.getData('text/plain')?.trim();
+      if (!text || !OEMBED_REGEX.test(text)) return;
+
+      const embedDomains = ['youtube.com','youtu.be','twitter.com','x.com','vimeo.com','instagram.com','tiktok.com','facebook.com'];
+      try {
+        const url = new URL(text).hostname.replace('www.','');
+        if (!embedDomains.some(d => url.includes(d))) return;
+      } catch { return; }
+
+      e.preventDefault();
+
+      const placeholder = document.createElement('div');
+      placeholder.className = 'bdn-lbc__embed-preview';
+      placeholder.setAttribute('contenteditable', 'false');
+      placeholder.dataset.embedUrl = text;
+      placeholder.innerHTML = '<p style="color:#767676;font-size:0.8rem;margin:0">Loading embed…</p>';
+
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const range = sel.getRangeAt(0);
+        range.collapse(false);
+        range.insertNode(placeholder);
+        range.setStartAfter(placeholder);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      try {
+        const proxyUrl = `/wp-json/oembed/1.0/proxy?url=${encodeURIComponent(text)}&_wpnonce=${NONCE}`;
+        const res = await fetch(proxyUrl, { headers: { 'X-WP-Nonce': NONCE } });
+        if (!res.ok) throw new Error('oEmbed failed');
+        const data = await res.json();
+        if (data.html) {
+          placeholder.innerHTML = data.html;
+        } else if (data.title) {
+          placeholder.innerHTML = `<p style="margin:0"><a href="${esc(text)}" target="_blank">${esc(data.title)}</a></p>`;
+        } else {
+          throw new Error('No embed HTML');
+        }
+      } catch {
+        placeholder.outerHTML = `<p><a href="${esc(text)}" target="_blank">${esc(text)}</a></p>`;
+        return;
+      }
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'bdn-lbc__embed-preview__remove';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.title = 'Remove embed';
+      removeBtn.addEventListener('click', () => { placeholder.remove(); });
+      placeholder.appendChild(removeBtn);
+    });
+  })();
+
 
   function syncIndicator(status) {
     const dot=document.getElementById('bdn-lbc-indicator');
@@ -538,8 +600,17 @@
 
   async function submitEntry() {
     const editor=document.getElementById('bdn-lbc-content');
-    const content=(editor?.innerHTML||'').trim();
-    const contentText=(editor?.innerText||'').trim();
+    const rawHtml=(editor?.innerHTML||'').trim();
+    // Convert embed previews back to bare URLs for server-side oEmbed
+    const tmp = document.createElement('div');
+    tmp.innerHTML = rawHtml;
+    tmp.querySelectorAll('.bdn-lbc__embed-preview').forEach(el => {
+      const url = el.dataset.embedUrl;
+      if (url) { const p = document.createElement('p'); p.textContent = url; el.replaceWith(p); }
+      else el.remove();
+    });
+    const content = tmp.innerHTML.trim();
+    const contentText = tmp.innerText.trim();
     const title=document.getElementById('bdn-lbc-headline')?.value.trim();
     const byline=document.getElementById('bdn-lbc-byline')?.value.trim();
     const label=document.getElementById('bdn-lbc-label')?.value.trim();
