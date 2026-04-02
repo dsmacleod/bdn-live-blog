@@ -21,6 +21,17 @@
   const STOP = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','is','was','are','were']);
   function naiveSlug(t){ return t.toLowerCase().replace(/<[^>]+>/g,'').split(/\s+/).map(w=>w.replace(/[^a-z0-9]/g,'')).filter(w=>w&&!STOP.has(w)).slice(0,7).join('-').slice(0,60); }
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function sanitizeHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('*').forEach(el => {
+      for (const attr of [...el.attributes]) {
+        if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+        if (['href','src','action','formaction'].includes(attr.name) && attr.value.trim().toLowerCase().startsWith('javascript:')) el.removeAttribute(attr.name);
+      }
+    });
+    return tmp.innerHTML;
+  }
   function fmtTime(iso){ const d=new Date(iso); return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})+' · '+d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
 
   // ══ Reader widget ══════════════════════════════════════════════════════════
@@ -109,7 +120,7 @@
               ${entry.image_credit?`<span class="bdn-lb-figure__credit">${esc(entry.image_credit)}</span>`:''}
             </figcaption>`:''}
           </figure>`:''}
-          <div class="bdn-lb-content">${entry.content}</div>
+          <div class="bdn-lb-content">${sanitizeHtml(entry.content)}</div>
           <div class="bdn-lb-entry-footer">
             <span class="bdn-lb-entry-byline">${esc(entry.byline)}</span>
             <a class="bdn-lb-entry-permalink" href="${esc(shareUrl)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link</a>
@@ -580,7 +591,7 @@
         <span class="bdn-lbc__entry-byline">${esc(e.byline)}</span>
       </div>
       ${e.title?`<strong class="bdn-lbc__entry-title">${esc(e.title)}</strong>`:''}
-      <div class="bdn-lbc__entry-body">${e.content}</div>
+      <div class="bdn-lbc__entry-body">${sanitizeHtml(e.content)}</div>
       <div class="bdn-lbc__entry-actions">
         <a href="${esc(e.entry_url||e.anchor_url||'#')}" target="_blank" class="bdn-lbc__entry-url">${esc(e.seo_slug||'#'+e.id)}</a>
         <button class="bdn-lbc__act bdn-lbc__act--pin${e.pinned?' bdn-lbc__act--pinned':''}" data-id="${e.id}">${pinLabel}</button>
@@ -598,7 +609,7 @@
   function startEdit(e) {
     editingId=e.id;
     document.getElementById('bdn-lbc-headline').value=e.title||'';
-    const _se=document.getElementById('bdn-lbc-content'); if(_se) _se.innerHTML=e.content;
+    const _se=document.getElementById('bdn-lbc-content'); if(_se) _se.innerHTML=sanitizeHtml(e.content);
     document.getElementById('bdn-lbc-byline').value=e.byline||'';
     document.getElementById('bdn-lbc-label').value=e.label||'';
     document.getElementById('bdn-lbc-caption').value=e.image_caption||'';
