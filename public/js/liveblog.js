@@ -504,8 +504,9 @@
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
     const imgs = Array.from(tmp.querySelectorAll('img[src^="data:"]'));
-    if (!imgs.length) return html;
+    if (!imgs.length) return { html, failures: 0 };
 
+    let failures = 0;
     for (const img of imgs) {
       try {
         const dataUrl  = img.src;
@@ -522,16 +523,17 @@
           headers: { 'X-WP-Nonce': NONCE },
           body:    form,
         });
-        if (!res.ok) continue;
+        if (!res.ok) { failures++; img.remove(); continue; }
         const data = await res.json();
         const url  = data.source_url || data.guid?.rendered;
-        if (url) img.src = url;
+        if (url) img.src = url; else { failures++; img.remove(); }
       } catch (e) {
-        // Leave the data URL in place if upload fails — server will sanitize.
         console.warn('BDN LiveBlog: inline image upload failed', e);
+        failures++;
+        img.remove();
       }
     }
-    return tmp.innerHTML;
+    return { html: tmp.innerHTML, failures };
   }
 
   async function submitEntry() {
@@ -549,7 +551,11 @@
     try {
       // Upload any base64 inline images to the WP media library before submitting,
       // so wp_kses_post on the server doesn't strip them.
-      const cleanContent = await uploadInlineImages(content);
+      const { html: cleanContent, failures: imgFailures } = await uploadInlineImages(content);
+      if (imgFailures > 0) {
+        const proceed = confirm(`${imgFailures} inline image(s) failed to upload and were removed. Publish anyway?`);
+        if (!proceed) { btn.disabled=false; btn.textContent=editingId?'Save changes':'Publish entry'; return; }
+      }
       const payload = { title, content: cleanContent, byline, label,
         image_id:      selectedImg.id || 0,
         image_caption: caption,
