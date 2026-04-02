@@ -252,6 +252,16 @@
   color: var(--lb-muted);
 }
 
+/* ── Connection error ─────────────────────────────────────────────────────── */
+.bdn-lb-conn-error {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  color: var(--lb-muted);
+  text-align: center;
+  padding: 0.4rem 0;
+  font-style: italic;
+}
+
 /* ══ Standalone entry page ══════════════════════════════════════════════════── */
 .bdn-lb-entry-page__inner {
   max-width: 740px;
@@ -917,3 +927,158 @@
 /* Pin action button */
 .bdn-lbc__act--pin { color: var(--lb-muted); }
 .bdn-lbc__act--pin.bdn-lbc__act--pinned { color: var(--lb-text); font-weight: 900; }
+
+/* ── Highlights / key moments ─────────────────────────────────────────────── */
+.bdn-lb-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--lb-border);
+  margin-bottom: 0;
+}
+.bdn-lb-tab {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lb-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.6em 1em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.bdn-lb-tab:hover { color: var(--lb-text); }
+.bdn-lb-tab--active {
+  color: var(--lb-text);
+  border-bottom-color: var(--lb-red);
+}
+.bdn-lb-tab__count {
+  font-weight: 400;
+  color: var(--lb-muted);
+}
+
+.bdn-lb-entry.is-highlight .bdn-lb-body {
+  border-left: 3px solid #f5c518;
+  padding-left: 1rem;
+}
+
+.bdn-lb-highlight-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--lb-font-ui);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #8a6d00;
+  background: #fef9e7;
+  border: 1px solid #f5c518;
+  padding: 0.15em 0.5em;
+}
+
+.bdn-lbc__act--highlight { color: var(--lb-muted); }
+.bdn-lbc__act--highlight.bdn-lbc__act--highlighted { color: #8a6d00; }
+
+.bdn-lbc__entry--highlighted {
+  border-left: 3px solid #f5c518;
+  padding-left: 8px;
+}
+
+/* ── Embeds in entries ────────────────────────────────────────────────────── */
+.bdn-lb-content iframe,
+.bdn-lb-entry-page__content iframe {
+  max-width: 100%;
+  border: 0;
+}
+.bdn-lb-content .wp-block-embed,
+.bdn-lb-content .embed-wrap {
+  margin: 0.75rem 0;
+}
+/* Composer embed preview */
+.bdn-lbc__embed-preview {
+  border: 1px solid var(--lb-border);
+  border-radius: 0;
+  padding: 0.5rem;
+  margin: 6px 0;
+  background: #f9f9f9;
+  position: relative;
+  user-select: none;
+}
+.bdn-lbc__embed-preview iframe { max-width: 100%; }
+.bdn-lbc__embed-preview__remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: var(--lb-text);
+  color: #fff;
+  border: none;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bdn-lbc__embed-preview__remove:hover { background: var(--lb-red); }
+
+/* ══ Mobile ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Reader entries — stack, hide time column */
+  .bdn-lb-entry {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .bdn-lb-time-col {
+    display: none;
+  }
+
+  /* Composer split rows — stack */
+  .bdn-lbc__form-row--split {
+    grid-template-columns: 1fr;
+  }
+  .bdn-lbc__form-row--split .bdn-lbc__input {
+    max-width: none !important;
+  }
+
+  /* Composer header — wrap */
+  .bdn-lbc__header {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  /* Entry footer — tighter on mobile */
+  .bdn-lb-entry-footer {
+    gap: 0.4rem;
+  }
+
+  /* Standalone entry page */
+  .bdn-lb-entry-page__inner {
+    padding: 1rem 0.75rem 2rem;
+  }
+  .bdn-lb-entry-page__title {
+    font-size: 1.5rem;
+  }
+  .bdn-lb-entry-page__footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bdn-lb-entry-page__share {
+    margin-left: 0;
+  }
+
+  /* Toolbar — wrap buttons */
+  .bdn-lbc__toolbar {
+    gap: 1px;
+  }
+
+  /* Link/image bars — stack */
+  .bdn-lbc__link-bar,
+  .bdn-lbc__img-bar {
+    flex-wrap: wrap;
+  }
+}

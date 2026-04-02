@@ -16,6 +16,7 @@ class BDN_Liveblog_API {
                     'post_id' => [ 'required' => true, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
                     'after'   => [ 'required' => false, 'type' => 'integer', 'default' => 0 ],
                     'page'    => [ 'required' => false, 'type' => 'integer', 'default' => 1 ],
+                    'highlights_only' => [ 'required' => false, 'type' => 'integer', 'default' => 0 ],
                 ],
             ],
             [
@@ -95,6 +96,7 @@ class BDN_Liveblog_API {
             'image_caption' => [ 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
             'image_credit'  => [ 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
             'pinned'        => [ 'required' => false, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
+            'highlight'     => [ 'required' => false, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
         ];
     }
 
@@ -143,6 +145,7 @@ class BDN_Liveblog_API {
             'image_caption' => $image_caption,
             'image_credit'  => $image_credit,
             'pinned'        => (bool) get_post_meta( $post->ID, '_bdn_lb_pinned', true ),
+            'highlight'     => (bool) get_post_meta( $post->ID, '_bdn_lb_highlight', true ),
             'entry_url'     => BDN_Liveblog_Slug::get_entry_url( $post->ID, $post->post_content, $title ),
             'anchor_url'    => BDN_Liveblog_Slug::get_anchor_url( $post->ID ),
             'seo_slug'      => get_post_meta( $post->ID, '_bdn_lb_seo_slug', true ),
@@ -155,6 +158,10 @@ class BDN_Liveblog_API {
      * and the liveblog auto-inject filter, all of which hang or bloat the API.
      */
     public static function render_entry_content( string $raw ): string {
+        global $wp_embed;
+        if ( $wp_embed ) {
+            $raw = $wp_embed->autoembed( $raw );
+        }
         $content = wptexturize( $raw );
         $content = wpautop( $content );
         $content = shortcode_unautop( $content );
@@ -164,12 +171,29 @@ class BDN_Liveblog_API {
         return $content;
     }
 
+    private static function entries_cache_key( int $post_id, int $page ): string {
+        return "bdn_lb_entries_{$post_id}_{$page}";
+    }
+
+    private static function bust_entries_cache( int $post_id ) {
+        for ( $i = 1; $i <= 10; $i++ ) {
+            delete_transient( self::entries_cache_key( $post_id, $i ) );
+        }
+    }
+
     // ── GET /entries ───────────────────────────────────────────────────────────
 
     public static function get_entries( WP_REST_Request $req ) {
         $post_id = $req->get_param( 'post_id' );
         $after   = $req->get_param( 'after' );
         $page    = max( 1, $req->get_param( 'page' ) );
+
+        if ( $after == 0 ) {
+            $cached = get_transient( self::entries_cache_key( $post_id, $page ) );
+            if ( $cached !== false ) {
+                return new WP_REST_Response( $cached, 200 );
+            }
+        }
 
         $args = [
             'post_type'      => BDN_Liveblog_Post_Type::CPT,
@@ -183,6 +207,10 @@ class BDN_Liveblog_API {
             ],
         ];
 
+        if ( $req->get_param( 'highlights_only' ) ) {
+            $args['meta_query'][] = [ 'key' => '_bdn_lb_highlight', 'value' => '1' ];
+        }
+
         if ( $after > 0 ) {
             $args['date_query'] = [ [ 'after' => gmdate( 'Y-m-d H:i:s', $after ), 'column' => 'post_date_gmt' ] ];
             $args['posts_per_page'] = 100; // polling — return all new
@@ -192,11 +220,17 @@ class BDN_Liveblog_API {
         $query   = new WP_Query( $args );
         $entries = array_map( [ __CLASS__, 'format_entry' ], $query->posts );
 
-        return new WP_REST_Response( [
+        $response_data = [
             'entries'     => $entries,
             'total'       => (int) $query->found_posts,
             'total_pages' => (int) $query->max_num_pages,
-        ], 200 );
+        ];
+
+        if ( $after == 0 ) {
+            set_transient( self::entries_cache_key( $post_id, $page ), $response_data, 30 );
+        }
+
+        return new WP_REST_Response( $response_data, 200 );
     }
 
     // ── GET /entries/{id} ──────────────────────────────────────────────────────
@@ -236,9 +270,17 @@ class BDN_Liveblog_API {
         if ( $req->get_param( 'image_caption' ) )  update_post_meta( $entry_id, '_bdn_lb_image_caption',  $req->get_param( 'image_caption' ) );
         if ( $req->get_param( 'image_credit' ) )   update_post_meta( $entry_id, '_bdn_lb_image_credit',   $req->get_param( 'image_credit' ) );
         if ( $req->has_param( 'pinned' ) ) { self::set_pinned( $entry_id, absint( $req->get_param( 'pinned' ) ), (int) $post_id ); }
+        if ( $req->has_param( 'highlight' ) ) {
+            if ( absint( $req->get_param( 'highlight' ) ) ) {
+                update_post_meta( $entry_id, '_bdn_lb_highlight', 1 );
+            } else {
+                delete_post_meta( $entry_id, '_bdn_lb_highlight' );
+            }
+        }
 
         // Touch the parent post so caches know to refresh
         wp_update_post( [ 'ID' => $post_id, 'post_modified' => current_time( 'mysql' ) ] );
+        self::bust_entries_cache( $post_id );
 
         return new WP_REST_Response( self::format_entry( get_post( $entry_id ) ), 201 );
     }
@@ -256,6 +298,8 @@ class BDN_Liveblog_API {
         if ( $req->get_param( 'content' ) ) $update['post_content'] = $req->get_param( 'content' );
 
         wp_update_post( $update );
+        $parent_id = (int) get_post_meta( $post->ID, '_bdn_lb_parent_post', true );
+        if ( $parent_id ) self::bust_entries_cache( $parent_id );
         if ( $req->get_param( 'byline' ) )        update_post_meta( $post->ID, '_bdn_lb_byline',        $req->get_param( 'byline' ) );
         if ( $req->get_param( 'label' ) )          update_post_meta( $post->ID, '_bdn_lb_label',         $req->get_param( 'label' ) );
         // image_id of 0 means "remove image"
@@ -267,6 +311,13 @@ class BDN_Liveblog_API {
         if ( $req->get_param( 'image_caption' ) )  update_post_meta( $post->ID, '_bdn_lb_image_caption', $req->get_param( 'image_caption' ) );
         if ( $req->get_param( 'image_credit' ) )   update_post_meta( $post->ID, '_bdn_lb_image_credit',  $req->get_param( 'image_credit' ) );
         if ( $req->has_param( 'pinned' ) ) { $parent = (int) get_post_meta( $post->ID, '_bdn_lb_parent_post', true ); self::set_pinned( $post->ID, absint( $req->get_param( 'pinned' ) ), $parent ); }
+        if ( $req->has_param( 'highlight' ) ) {
+            if ( absint( $req->get_param( 'highlight' ) ) ) {
+                update_post_meta( $post->ID, '_bdn_lb_highlight', 1 );
+            } else {
+                delete_post_meta( $post->ID, '_bdn_lb_highlight' );
+            }
+        }
 
         return new WP_REST_Response( self::format_entry( get_post( $post->ID ) ), 200 );
     }
@@ -278,6 +329,17 @@ class BDN_Liveblog_API {
         if ( ! $post || $post->post_type !== BDN_Liveblog_Post_Type::CPT ) {
             return new WP_Error( 'not_found', 'Entry not found.', [ 'status' => 404 ] );
         }
+
+        $throttle_key = 'bdn_lb_slug_regen_' . $post->ID;
+        if ( get_transient( $throttle_key ) ) {
+            return new WP_REST_Response( [
+                'id'        => $post->ID,
+                'seo_slug'  => get_post_meta( $post->ID, '_bdn_lb_seo_slug', true ),
+                'entry_url' => BDN_Liveblog_Slug::get_entry_url( $post->ID, $post->post_content, get_the_title( $post ) ),
+                'throttled' => true,
+            ], 200 );
+        }
+        set_transient( $throttle_key, 1, 30 );
 
         $new_slug = BDN_Liveblog_Slug::regenerate_slug(
             $post->ID,
@@ -299,6 +361,8 @@ class BDN_Liveblog_API {
         if ( ! $post || $post->post_type !== BDN_Liveblog_Post_Type::CPT ) {
             return new WP_Error( 'not_found', 'Entry not found.', [ 'status' => 404 ] );
         }
+        $parent_id = (int) get_post_meta( $post->ID, '_bdn_lb_parent_post', true );
+        if ( $parent_id ) self::bust_entries_cache( $parent_id );
         wp_delete_post( $post->ID, true );
         return new WP_REST_Response( [ 'deleted' => true ], 200 );
     }

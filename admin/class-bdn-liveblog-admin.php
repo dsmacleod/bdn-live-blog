@@ -72,6 +72,12 @@ class BDN_Liveblog_Admin {
             'default'           => '',
         ]);
 
+        register_setting( 'bdn_liveblog_settings', BDN_Liveblog_Slug::MODEL_OPTION, [
+            'type'              => 'string',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default'           => BDN_Liveblog_Slug::DEFAULT_MODEL,
+        ]);
+
         add_settings_section(
             'bdn_liveblog_main',
             'AI Slug Generation',
@@ -97,6 +103,27 @@ class BDN_Liveblog_Admin {
                 <p class="description">
                     Get a key at <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a>.
                     Stored encrypted at rest via WordPress options.
+                </p>
+                <?php
+            },
+            'bdn-liveblog-settings',
+            'bdn_liveblog_main'
+        );
+
+        add_settings_field(
+            BDN_Liveblog_Slug::MODEL_OPTION,
+            'Claude Model',
+            function() {
+                $val = get_option( BDN_Liveblog_Slug::MODEL_OPTION, BDN_Liveblog_Slug::DEFAULT_MODEL );
+                ?>
+                <input type="text"
+                       name="<?php echo esc_attr( BDN_Liveblog_Slug::MODEL_OPTION ); ?>"
+                       value="<?php echo esc_attr( $val ); ?>"
+                       class="regular-text"
+                       placeholder="<?php echo esc_attr( BDN_Liveblog_Slug::DEFAULT_MODEL ); ?>" />
+                <p class="description">
+                    Model ID for slug generation. Default: <code><?php echo esc_html( BDN_Liveblog_Slug::DEFAULT_MODEL ); ?></code>.
+                    See <a href="https://docs.anthropic.com/en/docs/about-claude/models" target="_blank" rel="noopener">available models</a>.
                 </p>
                 <?php
             },

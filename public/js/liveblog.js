@@ -21,6 +21,17 @@
   const STOP = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','is','was','are','were']);
   function naiveSlug(t){ return t.toLowerCase().replace(/<[^>]+>/g,'').split(/\s+/).map(w=>w.replace(/[^a-z0-9]/g,'')).filter(w=>w&&!STOP.has(w)).slice(0,7).join('-').slice(0,60); }
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function sanitizeHtml(html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('*').forEach(el => {
+      for (const attr of [...el.attributes]) {
+        if (attr.name.startsWith('on') || attr.name === 'srcdoc') el.removeAttribute(attr.name);
+        if (['href','src','action','formaction'].includes(attr.name) && attr.value.trim().toLowerCase().startsWith('javascript:')) el.removeAttribute(attr.name);
+      }
+    });
+    return tmp.innerHTML;
+  }
   function fmtTime(iso){ const d=new Date(iso); return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})+' · '+d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
 
   // ══ Reader widget ══════════════════════════════════════════════════════════
@@ -33,6 +44,8 @@
     const loadMoreBtn = widget.querySelector('.bdn-lb-load-more');
 
     let latestTimestamp = 0, currentPage = 1, totalPages = 1, pollTimer = null;
+    let pollFailures = 0;
+    const connErrorEl = widget.querySelector('.bdn-lb-conn-error');
 
     fetchStatus();
     fetchEntries(1, true);
@@ -63,13 +76,25 @@
       }).catch(()=>{ if(initial) entriesEl.innerHTML='<p class="bdn-lb-empty">Could not load entries.</p>'; });
     }
 
-    function schedulePoll() { clearTimeout(pollTimer); pollTimer = setTimeout(pollForNew, POLL); }
+    function schedulePoll() {
+      clearTimeout(pollTimer);
+      const delay = Math.min(POLL * Math.pow(2, pollFailures), 120000);
+      pollTimer = setTimeout(pollForNew, delay);
+    }
     function pollForNew() {
       api(`entries?post_id=${postId}&after=${latestTimestamp}`).then(data => {
+        pollFailures = 0;
+        if (connErrorEl) { connErrorEl.style.display = 'none'; connErrorEl.textContent = ''; }
         (data.entries||[]).forEach(e => { if(e.timestamp>latestTimestamp) latestTimestamp=e.timestamp; prependEntry(e); });
         updatedEl.textContent = 'Updated '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
         fetchStatus();
-      }).catch(()=>{}).finally(schedulePoll);
+      }).catch(() => {
+        pollFailures++;
+        if (connErrorEl) {
+          connErrorEl.style.display = '';
+          connErrorEl.textContent = 'Connection lost. Retrying…';
+        }
+      }).finally(schedulePoll);
     }
 
     loadMoreBtn && loadMoreBtn.addEventListener('click', () => {
@@ -78,6 +103,40 @@
       loadMoreBtn.textContent='Load earlier entries'; loadMoreBtn.disabled=false;
     });
 
+    // ── Highlights tabs ────────────────────────────────────────────────────
+    let activeFilter = 'all';
+    const tabs = widget.querySelectorAll('.bdn-lb-tab');
+    const highlightCountEl = widget.querySelector('.bdn-lb-tab__count');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const filter = tab.dataset.filter;
+        if (filter === activeFilter) return;
+        activeFilter = filter;
+        tabs.forEach(t => t.classList.toggle('bdn-lb-tab--active', t.dataset.filter === filter));
+        entriesEl.innerHTML = '<div class="bdn-lb-loading"><span class="bdn-lb-spinner"></span> Loading…</div>';
+        if (filter === 'highlights') {
+          api(`entries?post_id=${postId}&highlights_only=1`).then(data => {
+            entriesEl.innerHTML = '';
+            if (!data.entries.length) { entriesEl.innerHTML = '<p class="bdn-lb-empty">No key moments yet.</p>'; return; }
+            data.entries.forEach(e => appendEntry(e, false));
+          }).catch(() => { entriesEl.innerHTML = '<p class="bdn-lb-empty">Could not load.</p>'; });
+        } else {
+          fetchEntries(1, true);
+        }
+      });
+    });
+
+    function updateHighlightCount() {
+      api(`entries?post_id=${postId}&highlights_only=1`).then(data => {
+        if (highlightCountEl) {
+          const n = data.total || 0;
+          highlightCountEl.textContent = n > 0 ? `(${n})` : '';
+        }
+      }).catch(() => {});
+    }
+    updateHighlightCount();
+
     function buildEntryEl(entry, isNew) {
       const d=new Date(entry.published);
       const hour=d.toLocaleTimeString('en-US',{hour:'numeric',hour12:true}).replace(/\s?(AM|PM)/i,'');
@@ -85,7 +144,7 @@
       const ampm=d.toLocaleTimeString('en-US',{hour:'numeric',hour12:true}).match(/(AM|PM)/i)?.[0]||'';
       const shareUrl=entry.entry_url||entry.anchor_url||`${location.href}#entry-${entry.id}`;
       const el=document.createElement('article');
-      el.className='bdn-lb-entry'+(isNew?' is-new':'')+(entry.pinned?' is-pinned':'');
+      el.className='bdn-lb-entry'+(isNew?' is-new':'')+(entry.pinned?' is-pinned':'')+(entry.highlight?' is-highlight':'');
       el.id='entry-'+entry.id;
       el.dataset.entryId=entry.id;
       el.innerHTML=`
@@ -96,7 +155,7 @@
           </time>
         </div>
         <div class="bdn-lb-body">
-          <div class="bdn-lb-meta">${entry.pinned?'<span class="bdn-lb-pin-badge">Pinned</span>':''}${entry.label?`<span class="bdn-lb-label">${esc(entry.label)}</span>`:''}</div>
+          <div class="bdn-lb-meta">${entry.pinned?'<span class="bdn-lb-pin-badge">Pinned</span>':''}${entry.highlight?'<span class="bdn-lb-highlight-badge">Key moment</span>':''}${entry.label?`<span class="bdn-lb-label">${esc(entry.label)}</span>`:''}</div>
           ${entry.title?`<h2 class="bdn-lb-entry-title">${esc(entry.title)}</h2>`:''}
           ${entry.image_url?`<figure class="bdn-lb-figure">
             <img src="${esc(entry.image_url)}"
@@ -109,7 +168,7 @@
               ${entry.image_credit?`<span class="bdn-lb-figure__credit">${esc(entry.image_credit)}</span>`:''}
             </figcaption>`:''}
           </figure>`:''}
-          <div class="bdn-lb-content">${entry.content}</div>
+          <div class="bdn-lb-content">${sanitizeHtml(entry.content)}</div>
           <div class="bdn-lb-entry-footer">
             <span class="bdn-lb-entry-byline">${esc(entry.byline)}</span>
             <a class="bdn-lb-entry-permalink" href="${esc(shareUrl)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link</a>
@@ -448,6 +507,68 @@
 
   bindToolbar();
 
+  // ── Embed auto-detection ──────────────────────────────────────────────────
+  (function initEmbedDetection() {
+    const editor = document.getElementById('bdn-lbc-content');
+    if (!editor) return;
+
+    const OEMBED_REGEX = /^(https?:\/\/\S+)$/;
+
+    editor.addEventListener('paste', async (e) => {
+      const text = (e.clipboardData || window.clipboardData)?.getData('text/plain')?.trim();
+      if (!text || !OEMBED_REGEX.test(text)) return;
+
+      const embedDomains = ['youtube.com','youtu.be','twitter.com','x.com','vimeo.com','instagram.com','tiktok.com','facebook.com'];
+      try {
+        const url = new URL(text).hostname.replace('www.','');
+        if (!embedDomains.some(d => url.includes(d))) return;
+      } catch { return; }
+
+      e.preventDefault();
+
+      const placeholder = document.createElement('div');
+      placeholder.className = 'bdn-lbc__embed-preview';
+      placeholder.setAttribute('contenteditable', 'false');
+      placeholder.dataset.embedUrl = text;
+      placeholder.innerHTML = '<p style="color:#767676;font-size:0.8rem;margin:0">Loading embed…</p>';
+
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) {
+        const range = sel.getRangeAt(0);
+        range.collapse(false);
+        range.insertNode(placeholder);
+        range.setStartAfter(placeholder);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      try {
+        const proxyUrl = `/wp-json/oembed/1.0/proxy?url=${encodeURIComponent(text)}&_wpnonce=${NONCE}`;
+        const res = await fetch(proxyUrl, { headers: { 'X-WP-Nonce': NONCE } });
+        if (!res.ok) throw new Error('oEmbed failed');
+        const data = await res.json();
+        if (data.html) {
+          placeholder.innerHTML = data.html;
+        } else if (data.title) {
+          placeholder.innerHTML = `<p style="margin:0"><a href="${esc(text)}" target="_blank">${esc(data.title)}</a></p>`;
+        } else {
+          throw new Error('No embed HTML');
+        }
+      } catch {
+        placeholder.outerHTML = `<p><a href="${esc(text)}" target="_blank">${esc(text)}</a></p>`;
+        return;
+      }
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'bdn-lbc__embed-preview__remove';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.title = 'Remove embed';
+      removeBtn.addEventListener('click', () => { placeholder.remove(); });
+      placeholder.appendChild(removeBtn);
+    });
+  })();
+
 
   function syncIndicator(status) {
     const dot=document.getElementById('bdn-lbc-indicator');
@@ -479,8 +600,9 @@
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
     const imgs = Array.from(tmp.querySelectorAll('img[src^="data:"]'));
-    if (!imgs.length) return html;
+    if (!imgs.length) return { html, failures: 0 };
 
+    let failures = 0;
     for (const img of imgs) {
       try {
         const dataUrl  = img.src;
@@ -497,22 +619,32 @@
           headers: { 'X-WP-Nonce': NONCE },
           body:    form,
         });
-        if (!res.ok) continue;
+        if (!res.ok) { failures++; img.remove(); continue; }
         const data = await res.json();
         const url  = data.source_url || data.guid?.rendered;
-        if (url) img.src = url;
+        if (url) img.src = url; else { failures++; img.remove(); }
       } catch (e) {
-        // Leave the data URL in place if upload fails — server will sanitize.
         console.warn('BDN LiveBlog: inline image upload failed', e);
+        failures++;
+        img.remove();
       }
     }
-    return tmp.innerHTML;
+    return { html: tmp.innerHTML, failures };
   }
 
   async function submitEntry() {
     const editor=document.getElementById('bdn-lbc-content');
-    const content=(editor?.innerHTML||'').trim();
-    const contentText=(editor?.innerText||'').trim();
+    const rawHtml=(editor?.innerHTML||'').trim();
+    // Convert embed previews back to bare URLs for server-side oEmbed
+    const tmp = document.createElement('div');
+    tmp.innerHTML = rawHtml;
+    tmp.querySelectorAll('.bdn-lbc__embed-preview').forEach(el => {
+      const url = el.dataset.embedUrl;
+      if (url) { const p = document.createElement('p'); p.textContent = url; el.replaceWith(p); }
+      else el.remove();
+    });
+    const content = tmp.innerHTML.trim();
+    const contentText = tmp.innerText.trim();
     const title=document.getElementById('bdn-lbc-headline')?.value.trim();
     const byline=document.getElementById('bdn-lbc-byline')?.value.trim();
     const label=document.getElementById('bdn-lbc-label')?.value.trim();
@@ -524,7 +656,11 @@
     try {
       // Upload any base64 inline images to the WP media library before submitting,
       // so wp_kses_post on the server doesn't strip them.
-      const cleanContent = await uploadInlineImages(content);
+      const { html: cleanContent, failures: imgFailures } = await uploadInlineImages(content);
+      if (imgFailures > 0) {
+        const proceed = confirm(`${imgFailures} inline image(s) failed to upload and were removed. Publish anyway?`);
+        if (!proceed) { btn.disabled=false; btn.textContent=editingId?'Save changes':'Publish entry'; return; }
+      }
       const payload = { title, content: cleanContent, byline, label,
         image_id:      selectedImg.id || 0,
         image_caption: caption,
@@ -570,7 +706,7 @@
 
   function buildComposerEntry(e) {
     const div=document.createElement('div');
-    div.className='bdn-lbc__entry'+(e.pinned?' bdn-lbc__entry--pinned':''); div.dataset.id=e.id;
+    div.className='bdn-lbc__entry'+(e.pinned?' bdn-lbc__entry--pinned':'')+(e.highlight?' bdn-lbc__entry--highlighted':''); div.dataset.id=e.id;
     const pinLabel=e.pinned?'&#x1F4CC; Pinned':'Pin';
     div.innerHTML=`
       <div class="bdn-lbc__entry-meta">
@@ -580,15 +716,17 @@
         <span class="bdn-lbc__entry-byline">${esc(e.byline)}</span>
       </div>
       ${e.title?`<strong class="bdn-lbc__entry-title">${esc(e.title)}</strong>`:''}
-      <div class="bdn-lbc__entry-body">${e.content}</div>
+      <div class="bdn-lbc__entry-body">${sanitizeHtml(e.content)}</div>
       <div class="bdn-lbc__entry-actions">
         <a href="${esc(e.entry_url||e.anchor_url||'#')}" target="_blank" class="bdn-lbc__entry-url">${esc(e.seo_slug||'#'+e.id)}</a>
+        <button class="bdn-lbc__act bdn-lbc__act--highlight${e.highlight?' bdn-lbc__act--highlighted':''}" data-id="${e.id}">${e.highlight?'&#x2605; Key moment':'&#x2606; Key moment'}</button>
         <button class="bdn-lbc__act bdn-lbc__act--pin${e.pinned?' bdn-lbc__act--pinned':''}" data-id="${e.id}">${pinLabel}</button>
         <button class="bdn-lbc__act bdn-lbc__act--edit" data-id="${e.id}">Edit</button>
         <button class="bdn-lbc__act bdn-lbc__act--regen" data-id="${e.id}">&#x21BB; Slug</button>
         <button class="bdn-lbc__act bdn-lbc__act--delete" data-id="${e.id}">Delete</button>
       </div>`;
     div.querySelector('.bdn-lbc__act--pin')?.addEventListener('click',()=>togglePin(e.id, !e.pinned));
+    div.querySelector('.bdn-lbc__act--highlight')?.addEventListener('click',()=>toggleHighlight(e.id, !e.highlight));
     div.querySelector('.bdn-lbc__act--edit')?.addEventListener('click',()=>startEdit(e));
     div.querySelector('.bdn-lbc__act--regen')?.addEventListener('click',()=>regenSlug(e.id,div));
     div.querySelector('.bdn-lbc__act--delete')?.addEventListener('click',()=>deleteEntry(e.id));
@@ -598,7 +736,7 @@
   function startEdit(e) {
     editingId=e.id;
     document.getElementById('bdn-lbc-headline').value=e.title||'';
-    const _se=document.getElementById('bdn-lbc-content'); if(_se) _se.innerHTML=e.content;
+    const _se=document.getElementById('bdn-lbc-content'); if(_se) _se.innerHTML=sanitizeHtml(e.content);
     document.getElementById('bdn-lbc-byline').value=e.byline||'';
     document.getElementById('bdn-lbc-label').value=e.label||'';
     document.getElementById('bdn-lbc-caption').value=e.image_caption||'';
@@ -649,6 +787,25 @@
         }).catch(() => {});
       });
     } catch(e) { alert('Could not update pin: ' + e.message); }
+  }
+
+  async function toggleHighlight(id, shouldHighlight) {
+    try {
+      await api(`entries/${id}`, {
+        method: 'POST',
+        body: JSON.stringify({ highlight: shouldHighlight ? 1 : 0 }),
+      });
+      loadComposerEntries();
+      document.querySelectorAll('.bdn-liveblog').forEach(w => {
+        const countEl = w.querySelector('.bdn-lb-tab__count');
+        if (countEl) {
+          api(`entries?post_id=${POST_ID}&highlights_only=1`).then(data => {
+            const n = data.total || 0;
+            countEl.textContent = n > 0 ? `(${n})` : '';
+          }).catch(() => {});
+        }
+      });
+    } catch(e) { alert('Could not update highlight: ' + e.message); }
   }
 
   async function deleteEntry(id) {

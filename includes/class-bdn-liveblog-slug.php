@@ -25,6 +25,8 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class BDN_Liveblog_Slug {
 
     const API_KEY_OPTION = 'bdn_liveblog_anthropic_key';
+    const MODEL_OPTION   = 'bdn_liveblog_anthropic_model';
+    const DEFAULT_MODEL  = 'claude-haiku-4-5-20251001';
     const CACHE_PREFIX   = 'bdn_lb_slug_';
     const CACHE_TTL      = DAY_IN_SECONDS * 30;
     const MAX_SLUG_LEN   = 60;
@@ -116,7 +118,7 @@ PROMPT;
                 'anthropic-version' => '2023-06-01',
             ],
             'body' => wp_json_encode( [
-                'model'      => 'claude-haiku-4-5-20251001',
+                'model'      => get_option( self::MODEL_OPTION, self::DEFAULT_MODEL ),
                 'max_tokens' => 30,
                 'messages'   => [ [ 'role' => 'user', 'content' => $prompt ] ],
             ] ),
