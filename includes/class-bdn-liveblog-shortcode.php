@@ -32,6 +32,11 @@ class BDN_Liveblog_Shortcode {
                 <span class="bdn-lb-conn-error" style="display:none"></span>
             </div>
 
+            <div class="bdn-lb-tabs">
+                <button class="bdn-lb-tab bdn-lb-tab--active" data-filter="all">All updates</button>
+                <button class="bdn-lb-tab" data-filter="highlights">Key moments <span class="bdn-lb-tab__count"></span></button>
+            </div>
+
             <div class="bdn-lb-entries" role="feed">
                 <div class="bdn-lb-loading">
                     <span class="bdn-lb-spinner" aria-hidden="true"></span>

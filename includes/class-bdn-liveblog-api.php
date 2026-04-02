@@ -16,6 +16,7 @@ class BDN_Liveblog_API {
                     'post_id' => [ 'required' => true, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
                     'after'   => [ 'required' => false, 'type' => 'integer', 'default' => 0 ],
                     'page'    => [ 'required' => false, 'type' => 'integer', 'default' => 1 ],
+                    'highlights_only' => [ 'required' => false, 'type' => 'integer', 'default' => 0 ],
                 ],
             ],
             [
@@ -95,6 +96,7 @@ class BDN_Liveblog_API {
             'image_caption' => [ 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
             'image_credit'  => [ 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_text_field' ],
             'pinned'        => [ 'required' => false, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
+            'highlight'     => [ 'required' => false, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
         ];
     }
 
@@ -143,6 +145,7 @@ class BDN_Liveblog_API {
             'image_caption' => $image_caption,
             'image_credit'  => $image_credit,
             'pinned'        => (bool) get_post_meta( $post->ID, '_bdn_lb_pinned', true ),
+            'highlight'     => (bool) get_post_meta( $post->ID, '_bdn_lb_highlight', true ),
             'entry_url'     => BDN_Liveblog_Slug::get_entry_url( $post->ID, $post->post_content, $title ),
             'anchor_url'    => BDN_Liveblog_Slug::get_anchor_url( $post->ID ),
             'seo_slug'      => get_post_meta( $post->ID, '_bdn_lb_seo_slug', true ),
@@ -204,6 +207,10 @@ class BDN_Liveblog_API {
             ],
         ];
 
+        if ( $req->get_param( 'highlights_only' ) ) {
+            $args['meta_query'][] = [ 'key' => '_bdn_lb_highlight', 'value' => '1' ];
+        }
+
         if ( $after > 0 ) {
             $args['date_query'] = [ [ 'after' => gmdate( 'Y-m-d H:i:s', $after ), 'column' => 'post_date_gmt' ] ];
             $args['posts_per_page'] = 100; // polling — return all new
@@ -263,6 +270,13 @@ class BDN_Liveblog_API {
         if ( $req->get_param( 'image_caption' ) )  update_post_meta( $entry_id, '_bdn_lb_image_caption',  $req->get_param( 'image_caption' ) );
         if ( $req->get_param( 'image_credit' ) )   update_post_meta( $entry_id, '_bdn_lb_image_credit',   $req->get_param( 'image_credit' ) );
         if ( $req->has_param( 'pinned' ) ) { self::set_pinned( $entry_id, absint( $req->get_param( 'pinned' ) ), (int) $post_id ); }
+        if ( $req->has_param( 'highlight' ) ) {
+            if ( absint( $req->get_param( 'highlight' ) ) ) {
+                update_post_meta( $entry_id, '_bdn_lb_highlight', 1 );
+            } else {
+                delete_post_meta( $entry_id, '_bdn_lb_highlight' );
+            }
+        }
 
         // Touch the parent post so caches know to refresh
         wp_update_post( [ 'ID' => $post_id, 'post_modified' => current_time( 'mysql' ) ] );
@@ -297,6 +311,13 @@ class BDN_Liveblog_API {
         if ( $req->get_param( 'image_caption' ) )  update_post_meta( $post->ID, '_bdn_lb_image_caption', $req->get_param( 'image_caption' ) );
         if ( $req->get_param( 'image_credit' ) )   update_post_meta( $post->ID, '_bdn_lb_image_credit',  $req->get_param( 'image_credit' ) );
         if ( $req->has_param( 'pinned' ) ) { $parent = (int) get_post_meta( $post->ID, '_bdn_lb_parent_post', true ); self::set_pinned( $post->ID, absint( $req->get_param( 'pinned' ) ), $parent ); }
+        if ( $req->has_param( 'highlight' ) ) {
+            if ( absint( $req->get_param( 'highlight' ) ) ) {
+                update_post_meta( $post->ID, '_bdn_lb_highlight', 1 );
+            } else {
+                delete_post_meta( $post->ID, '_bdn_lb_highlight' );
+            }
+        }
 
         return new WP_REST_Response( self::format_entry( get_post( $post->ID ) ), 200 );
     }

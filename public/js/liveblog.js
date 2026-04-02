@@ -103,6 +103,40 @@
       loadMoreBtn.textContent='Load earlier entries'; loadMoreBtn.disabled=false;
     });
 
+    // ── Highlights tabs ────────────────────────────────────────────────────
+    let activeFilter = 'all';
+    const tabs = widget.querySelectorAll('.bdn-lb-tab');
+    const highlightCountEl = widget.querySelector('.bdn-lb-tab__count');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const filter = tab.dataset.filter;
+        if (filter === activeFilter) return;
+        activeFilter = filter;
+        tabs.forEach(t => t.classList.toggle('bdn-lb-tab--active', t.dataset.filter === filter));
+        entriesEl.innerHTML = '<div class="bdn-lb-loading"><span class="bdn-lb-spinner"></span> Loading…</div>';
+        if (filter === 'highlights') {
+          api(`entries?post_id=${postId}&highlights_only=1`).then(data => {
+            entriesEl.innerHTML = '';
+            if (!data.entries.length) { entriesEl.innerHTML = '<p class="bdn-lb-empty">No key moments yet.</p>'; return; }
+            data.entries.forEach(e => appendEntry(e, false));
+          }).catch(() => { entriesEl.innerHTML = '<p class="bdn-lb-empty">Could not load.</p>'; });
+        } else {
+          fetchEntries(1, true);
+        }
+      });
+    });
+
+    function updateHighlightCount() {
+      api(`entries?post_id=${postId}&highlights_only=1`).then(data => {
+        if (highlightCountEl) {
+          const n = data.total || 0;
+          highlightCountEl.textContent = n > 0 ? `(${n})` : '';
+        }
+      }).catch(() => {});
+    }
+    updateHighlightCount();
+
     function buildEntryEl(entry, isNew) {
       const d=new Date(entry.published);
       const hour=d.toLocaleTimeString('en-US',{hour:'numeric',hour12:true}).replace(/\s?(AM|PM)/i,'');
@@ -110,7 +144,7 @@
       const ampm=d.toLocaleTimeString('en-US',{hour:'numeric',hour12:true}).match(/(AM|PM)/i)?.[0]||'';
       const shareUrl=entry.entry_url||entry.anchor_url||`${location.href}#entry-${entry.id}`;
       const el=document.createElement('article');
-      el.className='bdn-lb-entry'+(isNew?' is-new':'')+(entry.pinned?' is-pinned':'');
+      el.className='bdn-lb-entry'+(isNew?' is-new':'')+(entry.pinned?' is-pinned':'')+(entry.highlight?' is-highlight':'');
       el.id='entry-'+entry.id;
       el.dataset.entryId=entry.id;
       el.innerHTML=`
@@ -121,7 +155,7 @@
           </time>
         </div>
         <div class="bdn-lb-body">
-          <div class="bdn-lb-meta">${entry.pinned?'<span class="bdn-lb-pin-badge">Pinned</span>':''}${entry.label?`<span class="bdn-lb-label">${esc(entry.label)}</span>`:''}</div>
+          <div class="bdn-lb-meta">${entry.pinned?'<span class="bdn-lb-pin-badge">Pinned</span>':''}${entry.highlight?'<span class="bdn-lb-highlight-badge">Key moment</span>':''}${entry.label?`<span class="bdn-lb-label">${esc(entry.label)}</span>`:''}</div>
           ${entry.title?`<h2 class="bdn-lb-entry-title">${esc(entry.title)}</h2>`:''}
           ${entry.image_url?`<figure class="bdn-lb-figure">
             <img src="${esc(entry.image_url)}"
@@ -672,7 +706,7 @@
 
   function buildComposerEntry(e) {
     const div=document.createElement('div');
-    div.className='bdn-lbc__entry'+(e.pinned?' bdn-lbc__entry--pinned':''); div.dataset.id=e.id;
+    div.className='bdn-lbc__entry'+(e.pinned?' bdn-lbc__entry--pinned':'')+(e.highlight?' bdn-lbc__entry--highlighted':''); div.dataset.id=e.id;
     const pinLabel=e.pinned?'&#x1F4CC; Pinned':'Pin';
     div.innerHTML=`
       <div class="bdn-lbc__entry-meta">
@@ -685,12 +719,14 @@
       <div class="bdn-lbc__entry-body">${sanitizeHtml(e.content)}</div>
       <div class="bdn-lbc__entry-actions">
         <a href="${esc(e.entry_url||e.anchor_url||'#')}" target="_blank" class="bdn-lbc__entry-url">${esc(e.seo_slug||'#'+e.id)}</a>
+        <button class="bdn-lbc__act bdn-lbc__act--highlight${e.highlight?' bdn-lbc__act--highlighted':''}" data-id="${e.id}">${e.highlight?'&#x2605; Key moment':'&#x2606; Key moment'}</button>
         <button class="bdn-lbc__act bdn-lbc__act--pin${e.pinned?' bdn-lbc__act--pinned':''}" data-id="${e.id}">${pinLabel}</button>
         <button class="bdn-lbc__act bdn-lbc__act--edit" data-id="${e.id}">Edit</button>
         <button class="bdn-lbc__act bdn-lbc__act--regen" data-id="${e.id}">&#x21BB; Slug</button>
         <button class="bdn-lbc__act bdn-lbc__act--delete" data-id="${e.id}">Delete</button>
       </div>`;
     div.querySelector('.bdn-lbc__act--pin')?.addEventListener('click',()=>togglePin(e.id, !e.pinned));
+    div.querySelector('.bdn-lbc__act--highlight')?.addEventListener('click',()=>toggleHighlight(e.id, !e.highlight));
     div.querySelector('.bdn-lbc__act--edit')?.addEventListener('click',()=>startEdit(e));
     div.querySelector('.bdn-lbc__act--regen')?.addEventListener('click',()=>regenSlug(e.id,div));
     div.querySelector('.bdn-lbc__act--delete')?.addEventListener('click',()=>deleteEntry(e.id));
@@ -751,6 +787,25 @@
         }).catch(() => {});
       });
     } catch(e) { alert('Could not update pin: ' + e.message); }
+  }
+
+  async function toggleHighlight(id, shouldHighlight) {
+    try {
+      await api(`entries/${id}`, {
+        method: 'POST',
+        body: JSON.stringify({ highlight: shouldHighlight ? 1 : 0 }),
+      });
+      loadComposerEntries();
+      document.querySelectorAll('.bdn-liveblog').forEach(w => {
+        const countEl = w.querySelector('.bdn-lb-tab__count');
+        if (countEl) {
+          api(`entries?post_id=${POST_ID}&highlights_only=1`).then(data => {
+            const n = data.total || 0;
+            countEl.textContent = n > 0 ? `(${n})` : '';
+          }).catch(() => {});
+        }
+      });
+    } catch(e) { alert('Could not update highlight: ' + e.message); }
   }
 
   async function deleteEntry(id) {
