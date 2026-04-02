@@ -1,0 +1,919 @@
+/* ── BDN Live Blog — public styles ────────────────────────────────────────── */
+
+/*
+ * Typography matches bangordailynews.com exactly:
+ *   Headlines  → Publico Headline (BDN display face) → Georgia fallback
+ *   Body copy  → Charter / Georgia (BDN body serif, ~17px / 1.7lh)
+ *   UI chrome  → Helvetica Neue / Arial (BDN's sans for labels, bylines, nav)
+ *   Author name → bold, #1a5936 (BDN's dark green)
+ *   Corners    → sharp (0px radius) — BDN uses no rounded corners in article UI
+ *   Dividers   → 1px #e0e0e0 rules, thick 3px black top-rule for section headers
+ */
+
+:root {
+  --lb-red:       #c8102e;
+  --lb-green:     #1a5936;
+  --lb-text:      #1a1a1a;
+  --lb-muted:     #767676;
+  --lb-border:    #e0e0e0;
+  --lb-bg:        #ffffff;
+  --lb-font-head: 'Publico Headline', Georgia, 'Times New Roman', serif;
+  --lb-font-body: Charter, Georgia, 'Times New Roman', serif;
+  --lb-font-ui:   'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ── Container ─────────────────────────────────────────────────────────────── */
+.bdn-liveblog {
+  font-family: var(--lb-font-body);
+  color: var(--lb-text);
+  margin: 2rem 0;
+}
+
+/* ── Header bar ────────────────────────────────────────────────────────────── */
+.bdn-lb-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0;
+  border-top: 3px solid var(--lb-text);
+  border-bottom: 1px solid var(--lb-border);
+  font-family: var(--lb-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lb-muted);
+}
+
+.bdn-lb-status-text {
+  flex: 1;
+  color: var(--lb-text);
+  letter-spacing: 0.12em;
+}
+
+.bdn-lb-last-updated {
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--lb-muted);
+  text-transform: none;
+}
+
+/* Live dot */
+.bdn-lb-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lb-muted);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.bdn-liveblog.is-live .bdn-lb-badge {
+  background: var(--lb-red);
+  animation: lb-pulse 2s ease-in-out infinite;
+}
+@keyframes lb-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(200,16,46,.45); }
+  50%      { box-shadow: 0 0 0 5px rgba(200,16,46,0); }
+}
+
+/* ── Loading ─────────────────────────────────────────────────────────────── */
+.bdn-lb-loading {
+  padding: 2.5rem 0;
+  font-family: var(--lb-font-ui);
+  font-size: 0.8125rem;
+  color: var(--lb-muted);
+  text-align: center;
+}
+.bdn-lb-spinner {
+  display: inline-block;
+  width: 15px; height: 15px;
+  border: 2px solid var(--lb-border);
+  border-top-color: var(--lb-red);
+  border-radius: 50%;
+  animation: lb-spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+@keyframes lb-spin { to { transform: rotate(360deg); } }
+
+/* ── Entry ─────────────────────────────────────────────────────────────────── */
+.bdn-lb-entry {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 0 1.25rem;
+  border-bottom: 1px solid var(--lb-border);
+  padding: 1.4rem 0;
+}
+.bdn-lb-entry.is-new {
+  animation: lb-slide-in 0.3s ease-out;
+}
+@keyframes lb-slide-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Time column */
+.bdn-lb-time-col {
+  text-align: right;
+  padding-top: 2px;
+  border-right: 1px solid var(--lb-border);
+  padding-right: 1.25rem;
+}
+.bdn-lb-time {
+  display: block;
+  font-family: var(--lb-font-ui);
+  font-weight: 700;
+  color: var(--lb-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+.bdn-lb-time .hour {
+  display: block;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--lb-text);
+  letter-spacing: -0.01em;
+}
+.bdn-lb-time .ampm {
+  display: block;
+  font-size: 0.5625rem;
+  letter-spacing: 0.08em;
+  margin-top: 1px;
+}
+
+/* Label — e.g. BREAKING */
+.bdn-lb-label {
+  display: inline-block;
+  font-family: var(--lb-font-ui);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #fff;
+  background: var(--lb-red);
+  padding: 0.2em 0.5em;
+  margin-bottom: 0.3rem;
+}
+
+/* Entry headline — BDN display serif */
+.bdn-lb-entry-title {
+  font-family: var(--lb-font-head);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.45rem;
+  color: var(--lb-text);
+}
+
+/* Body copy */
+.bdn-lb-content {
+  font-family: var(--lb-font-body);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--lb-text);
+}
+.bdn-lb-content p            { margin: 0 0 0.8em; }
+.bdn-lb-content p:last-child { margin-bottom: 0; }
+.bdn-lb-content a            { color: var(--lb-text); text-decoration: underline; }
+.bdn-lb-content a:hover      { color: var(--lb-red); }
+
+/* Entry footer */
+.bdn-lb-entry-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--lb-border);
+  font-family: var(--lb-font-ui);
+}
+
+/* Author — BDN bold dark green, matches byline style */
+.bdn-lb-entry-byline {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--lb-green);
+}
+
+.bdn-lb-entry-permalink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--lb-muted);
+  text-decoration: none;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 0.15s;
+}
+.bdn-lb-entry-permalink:hover { color: var(--lb-text); }
+
+.bdn-lb-copy-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--lb-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lb-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.bdn-lb-copy-link:hover { color: var(--lb-text); }
+
+/* ── Pagination ─────────────────────────────────────────────────────────────── */
+.bdn-lb-pagination { padding: 1rem 0; }
+.bdn-lb-load-more {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lb-text);
+  background: none;
+  border: 1px solid var(--lb-text);
+  padding: 0.5em 1.25em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.bdn-lb-load-more:hover { background: var(--lb-text); color: #fff; }
+
+/* ── Empty ─────────────────────────────────────────────────────────────────── */
+.bdn-lb-empty {
+  padding: 2rem 0;
+  font-family: var(--lb-font-ui);
+  font-size: 0.8125rem;
+  color: var(--lb-muted);
+}
+
+/* ══ Standalone entry page ══════════════════════════════════════════════════── */
+.bdn-lb-entry-page__inner {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 1.75rem 1rem 3.5rem;
+}
+
+/* Breadcrumb */
+.bdn-lb-breadcrumb {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-top: 3px solid var(--lb-text);
+  padding-top: 0.55rem;
+  margin-bottom: 2rem;
+}
+.bdn-lb-breadcrumb a { color: var(--lb-green); text-decoration: none; }
+.bdn-lb-breadcrumb a:hover { text-decoration: underline; }
+
+/* Article header */
+.bdn-lb-entry-page__header { margin-bottom: 1.25rem; }
+
+/* H1 — matches BDN's article headline: display serif, heavy, tight tracking */
+.bdn-lb-entry-page__title {
+  font-family: var(--lb-font-head);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0.35rem 0 1rem;
+  color: var(--lb-text);
+}
+
+/* Byline block — matches BDN screenshot exactly */
+.bdn-lb-entry-page__byline {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--lb-border);
+  border-bottom: 1px solid var(--lb-border);
+  font-family: var(--lb-font-ui);
+  font-size: 0.8125rem;
+}
+.bdn-lb-avatar {
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.bdn-lb-entry-page__byline-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+/* "by Jessica Piper" — "by" in gray, name bold green */
+.bdn-lb-entry-page__author {
+  font-weight: 700;
+  color: var(--lb-green);
+  font-size: 0.8125rem;
+}
+.bdn-lb-entry-page__author::before {
+  content: 'by ';
+  font-weight: 400;
+  color: var(--lb-muted);
+}
+.bdn-lb-entry-page__time {
+  font-size: 0.75rem;
+  color: var(--lb-muted);
+}
+
+/* Article body */
+.bdn-lb-entry-page__content {
+  font-family: var(--lb-font-body);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  margin-top: 1.5rem;
+  color: var(--lb-text);
+}
+.bdn-lb-entry-page__content p             { margin: 0 0 1em; }
+.bdn-lb-entry-page__content p:first-child { margin-top: 0; }
+.bdn-lb-entry-page__content a             { color: var(--lb-text); text-decoration: underline; }
+.bdn-lb-entry-page__content a:hover       { color: var(--lb-red); }
+
+/* Page footer */
+.bdn-lb-entry-page__footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--lb-border);
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.bdn-lb-entry-page__view-context {
+  font-weight: 700;
+  color: var(--lb-green);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.bdn-lb-entry-page__view-context:hover { text-decoration: underline; }
+
+/* Share row — BDN dark filled circles */
+.bdn-lb-entry-page__share {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  color: var(--lb-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.bdn-lb-entry-page__share a,
+.bdn-lb-entry-page__share button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--lb-text);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: var(--lb-font-ui);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.bdn-lb-entry-page__share a:hover,
+.bdn-lb-entry-page__share button:hover { background: var(--lb-red); }
+
+/* ══ Inline composer (logged-in editors, public story page) ═══════════════ */
+/*
+ * Sits above the live blog entries on the story page.
+ * Styled to feel like a native BDN editorial tool, not a WP admin widget.
+ * Sharp corners, BDN red accent, serif body, same type scale as the article.
+ */
+
+#bdn-lb-composer-root { margin-bottom: 0; }
+
+.bdn-lbc {
+  border: 1px solid var(--lb-border);
+  border-top: 3px solid var(--lb-red);
+  background: #fafafa;
+  margin-bottom: 0;
+  font-family: var(--lb-font-ui);
+}
+
+/* Header bar */
+.bdn-lbc__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--lb-border);
+  background: #fff;
+}
+.bdn-lbc__header-left { display: flex; align-items: center; gap: 0.5rem; }
+.bdn-lbc__header-right { display: flex; align-items: center; gap: 0.5rem; }
+
+.bdn-lbc__indicator {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--lb-muted);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.bdn-lbc__indicator.is-live {
+  background: var(--lb-red);
+  animation: lb-pulse 2s ease-in-out infinite;
+}
+
+.bdn-lbc__title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lb-text);
+}
+
+/* Status dropdown — minimal */
+.bdn-lbc__status-select {
+  font-family: var(--lb-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--lb-border);
+  background: #fff;
+  color: var(--lb-text);
+  padding: 0.25em 0.5em;
+  cursor: pointer;
+}
+.bdn-lbc__status-select:focus { outline: 2px solid var(--lb-red); outline-offset: 1px; }
+
+/* Collapse toggle */
+.bdn-lbc__toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.625rem;
+  color: var(--lb-muted);
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.bdn-lbc__toggle:hover { color: var(--lb-text); }
+
+/* Panel */
+.bdn-lbc__panel { padding: 0.9rem; }
+
+/* Form inputs */
+.bdn-lbc__input {
+  display: block;
+  width: 100%;
+  font-family: var(--lb-font-ui);
+  font-size: 0.875rem;
+  border: 1px solid var(--lb-border);
+  background: #fff;
+  color: var(--lb-text);
+  padding: 0.45rem 0.6rem;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.bdn-lbc__input:focus { outline: none; border-color: var(--lb-text); }
+
+.bdn-lbc__textarea {
+  display: block;
+  width: 100%;
+  font-family: var(--lb-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  border: 1px solid var(--lb-border);
+  background: #fff;
+  color: var(--lb-text);
+  padding: 0.55rem 0.6rem;
+  margin-bottom: 0.5rem;
+  box-sizing: border-box;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+.bdn-lbc__textarea:focus { outline: none; border-color: var(--lb-text); }
+.bdn-lbc__textarea::placeholder { color: var(--lb-muted); font-style: italic; }
+
+/* Split row */
+.bdn-lbc__form-row--split {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.bdn-lbc__form-row--split .bdn-lbc__input { margin-bottom: 0; }
+
+/* Slug preview */
+.bdn-lbc__slug-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  background: #eef4fb;
+  border: 1px solid #b3d3f5;
+  padding: 0.35rem 0.6rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+}
+.bdn-lbc__slug-prefix { font-weight: 700; color: #0a3d62; }
+.bdn-lbc__slug-preview code { color: #0a3d62; font-size: 0.75rem; word-break: break-all; }
+.bdn-lbc__slug-ai { color: var(--lb-muted); font-style: italic; }
+
+/* Action row */
+.bdn-lbc__form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* Primary publish button — BDN red */
+.bdn-lbc__btn--primary {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--lb-red);
+  border: none;
+  padding: 0.55em 1.25em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.bdn-lbc__btn--primary:hover { background: #a00d25; }
+.bdn-lbc__btn--primary:disabled { opacity: 0.6; cursor: default; }
+
+/* Ghost cancel button */
+.bdn-lbc__btn--ghost {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lb-muted);
+  background: none;
+  border: 1px solid var(--lb-border);
+  padding: 0.55em 1em;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.bdn-lbc__btn--ghost:hover { color: var(--lb-text); border-color: var(--lb-text); }
+
+/* Flash message */
+.bdn-lbc__msg {
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: color 0.2s;
+}
+
+/* Entry list divider */
+.bdn-lbc__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-top: 1px solid var(--lb-border);
+  padding-top: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lb-muted);
+}
+.bdn-lbc__count { font-weight: 400; }
+
+/* Composer entry list */
+.bdn-lbc__entries { margin-top: 0.5rem; }
+.bdn-lbc__entry {
+  border-top: 1px solid var(--lb-border);
+  padding: 0.75rem 0;
+  font-size: 0.8125rem;
+}
+.bdn-lbc__entry-meta {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+}
+.bdn-lbc__entry-label {
+  font-size: 0.5625rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: #fff; background: var(--lb-red);
+  padding: 0.15em 0.45em;
+}
+.bdn-lbc__entry-time { color: var(--lb-muted); font-size: 0.75rem; }
+.bdn-lbc__entry-byline { color: var(--lb-green); font-weight: 700; font-size: 0.75rem; }
+.bdn-lbc__entry-title { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; }
+.bdn-lbc__entry-body { font-family: var(--lb-font-body); font-size: 0.9375rem; line-height: 1.55; color: var(--lb-text); }
+.bdn-lbc__entry-body p { margin: 0 0 0.4em; }
+
+.bdn-lbc__entry-actions {
+  display: flex; align-items: center; gap: 0.5rem;
+  flex-wrap: wrap; margin-top: 0.45rem;
+  font-size: 0.75rem;
+}
+.bdn-lbc__entry-url {
+  font-family: monospace; font-size: 0.7rem;
+  color: var(--lb-muted); text-decoration: none;
+  border: 1px solid var(--lb-border);
+  padding: 0.1em 0.4em;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: inline-block;
+}
+.bdn-lbc__entry-url:hover { color: var(--lb-text); }
+
+.bdn-lbc__act {
+  background: none; border: none; padding: 0;
+  font-family: var(--lb-font-ui);
+  font-size: 0.6875rem; font-weight: 700;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  cursor: pointer; transition: color 0.15s;
+}
+.bdn-lbc__act--edit   { color: var(--lb-text); }
+.bdn-lbc__act--regen  { color: var(--lb-muted); }
+.bdn-lbc__act--delete { color: var(--lb-red); }
+.bdn-lbc__act:hover   { opacity: 0.7; }
+
+.bdn-lbc__loading { padding: 0.75rem 0; color: var(--lb-muted); font-size: 0.8125rem; }
+
+/* ── Entry photo / figure ─────────────────────────────────────────────────── */
+
+.bdn-lb-figure {
+  margin: 0.65rem 0 0.75rem;
+}
+.bdn-lb-figure__img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Matches BDN's editorial photo treatment: no border-radius, full bleed */
+}
+.bdn-lb-figure__caption {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--lb-muted);
+}
+.bdn-lb-figure__cap-text { font-style: italic; }
+.bdn-lb-figure__credit {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.6875rem;
+  color: var(--lb-muted);
+  white-space: nowrap;
+}
+.bdn-lb-figure__credit::before { content: 'Credit: '; font-weight: 400; }
+
+/* ── Composer photo controls ─────────────────────────────────────────────── */
+
+.bdn-lbc__photo-row {
+  margin-bottom: 0.5rem;
+}
+
+/* Thumbnail preview strip */
+.bdn-lbc__photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+  padding: 0.4rem;
+  border: 1px solid var(--lb-border);
+  background: #fff;
+}
+.bdn-lbc__photo-preview img {
+  width: 72px;
+  height: 54px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
+}
+.bdn-lbc__photo-remove {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--lb-muted);
+  cursor: pointer;
+  padding: 0 0.25rem;
+  margin-left: auto;
+  transition: color 0.15s;
+}
+.bdn-lbc__photo-remove:hover { color: var(--lb-red); }
+
+/* "Add photo" button */
+.bdn-lbc__photo-btn {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--lb-text);
+  background: #fff;
+  border: 1px solid var(--lb-border);
+  padding: 0.45em 0.9em;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+.bdn-lbc__photo-btn:hover {
+  border-color: var(--lb-text);
+}
+
+/* Caption + credit fields — only shown when photo is attached */
+.bdn-lbc__photo-meta { margin-top: 0.35rem; }
+.bdn-lbc__photo-meta .bdn-lbc__input { margin-bottom: 0.35rem; }
+
+/* ── Rich text toolbar ───────────────────────────────────────────────────── */
+
+.bdn-lbc__editor-wrap {
+  border: 1px solid var(--lb-border);
+  background: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.bdn-lbc__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--lb-border);
+  background: #f5f5f5;
+  flex-wrap: wrap;
+}
+
+.bdn-lbc__tb-btn {
+  font-family: var(--lb-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid var(--lb-border);
+  color: var(--lb-text);
+  padding: 3px 8px;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.1s;
+  user-select: none;
+}
+.bdn-lbc__tb-btn:hover  { background: #ececec; }
+.bdn-lbc__tb-btn:active { background: #e0e0e0; }
+
+.bdn-lbc__tb-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--lb-border);
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+/* Link and inline image bars */
+.bdn-lbc__link-bar,
+.bdn-lbc__img-bar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--lb-border);
+  background: #f9f9f9;
+}
+.bdn-lbc__link-bar { display: none; }
+.bdn-lbc__img-bar  { display: none; }
+
+.bdn-lbc__link-input,
+.bdn-lbc__file-input {
+  flex: 1;
+  font-family: var(--lb-font-ui);
+  font-size: 12px;
+  border: 1px solid var(--lb-border);
+  padding: 4px 7px;
+  color: var(--lb-text);
+  background: #fff;
+  min-width: 0;
+}
+.bdn-lbc__link-input:focus { outline: none; border-color: var(--lb-text); }
+
+.bdn-lbc__link-go {
+  font-family: var(--lb-font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--lb-text);
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s;
+}
+.bdn-lbc__link-go:hover { background: var(--lb-red); }
+
+.bdn-lbc__link-cancel {
+  font-family: var(--lb-font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: none;
+  border: 1px solid var(--lb-border);
+  color: var(--lb-muted);
+  padding: 5px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bdn-lbc__link-cancel:hover { color: var(--lb-text); border-color: var(--lb-text); }
+
+/* The contenteditable editor area */
+.bdn-lbc__editor {
+  min-height: 100px;
+  padding: 8px 10px;
+  font-family: var(--lb-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--lb-text);
+  outline: none;
+  background: #fff;
+}
+.bdn-lbc__editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--lb-muted);
+  font-style: italic;
+  pointer-events: none;
+}
+/* Inline content styles inside the editor */
+.bdn-lbc__editor a   { color: #0066cc; text-decoration: underline; }
+.bdn-lbc__editor img { max-width: 100%; height: auto; display: block; margin: 6px 0; }
+
+/* ── Pinned entries ──────────────────────────────────────────────────────── */
+
+/* Reader — pin badge sits before the label in the meta row */
+.bdn-lb-pin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--lb-font-ui);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--lb-text);
+  background: #f0f0f0;
+  border: 1px solid var(--lb-border);
+  padding: 0.15em 0.5em;
+}
+.bdn-lb-pin-badge::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--lb-text);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+/* Pinned entry gets a subtle left accent rule */
+.bdn-lb-entry.is-pinned .bdn-lb-time-col {
+  border-right-color: var(--lb-text);
+  border-right-width: 2px;
+}
+
+/* Composer — pinned entry row highlight */
+.bdn-lbc__entry--pinned {
+  background: #fafafa;
+  border-left: 2px solid var(--lb-text);
+  padding-left: 8px;
+}
+
+.bdn-lbc__pin-badge {
+  font-family: var(--lb-font-ui);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--lb-text);
+  background: #f0f0f0;
+  border: 1px solid var(--lb-border);
+  padding: 0.15em 0.45em;
+  margin-right: 2px;
+}
+
+/* Pin action button */
+.bdn-lbc__act--pin { color: var(--lb-muted); }
+.bdn-lbc__act--pin.bdn-lbc__act--pinned { color: var(--lb-text); font-weight: 900; }

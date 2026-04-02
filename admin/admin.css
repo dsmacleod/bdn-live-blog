@@ -1,0 +1,137 @@
+/* ── BDN Live Blog — admin styles ───────────────────────────────────────────── */
+
+:root {
+  --lb-red:    #c8102e;
+  --lb-border: #dcdcde;
+  --lb-bg:     #f6f7f7;
+  --lb-radius: 4px;
+}
+
+.bdn-lb-admin { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+/* Status bar */
+.bdn-lb-admin__status-bar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem .75rem;
+  background: var(--lb-bg);
+  border: 1px solid var(--lb-border);
+  border-radius: var(--lb-radius);
+  margin-bottom: 1rem;
+  font-size: .8125rem;
+}
+.bdn-lb-admin__status-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: #767676;
+  flex-shrink: 0;
+}
+.bdn-lb-admin__status-dot.is-live {
+  background: var(--lb-red);
+  animation: lb-pulse 1.8s ease-in-out infinite;
+}
+@keyframes lb-pulse {
+  0%,100%{ box-shadow: 0 0 0 0 rgba(200,16,46,.45); }
+  50%    { box-shadow: 0 0 0 5px rgba(200,16,46,0); }
+}
+.bdn-lb-admin__status-actions { margin-left: auto; display: flex; gap: .35rem; }
+
+/* Composer */
+.bdn-lb-admin__composer {
+  border: 1px solid var(--lb-border);
+  border-radius: var(--lb-radius);
+  padding: .9rem;
+  margin-bottom: 1rem;
+  background: #fff;
+}
+.bdn-lb-admin__composer h4 { margin: 0 0 .6rem; font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; color: #50575e; }
+.bdn-lb-admin__composer input[type="text"],
+.bdn-lb-admin__composer textarea {
+  display: block;
+  width: 100%;
+  margin-bottom: .5rem;
+  border: 1px solid var(--lb-border);
+  border-radius: var(--lb-radius);
+  padding: .45rem .55rem;
+  font-size: .875rem;
+  box-sizing: border-box;
+}
+.bdn-lb-admin__composer textarea { resize: vertical; }
+.bdn-lb-admin__composer-row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: .5rem; }
+
+/* Slug preview */
+.bdn-lb-admin__slug-preview {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  flex-wrap: wrap;
+  background: #f0f6fc;
+  border: 1px solid #b3d3f5;
+  border-radius: var(--lb-radius);
+  padding: .4rem .6rem;
+  font-size: .78rem;
+  margin-bottom: .6rem;
+}
+.bdn-lb-admin__slug-label { font-weight: 600; color: #0a3d62; }
+.bdn-lb-admin__slug-preview code { color: #0a3d62; word-break: break-all; }
+.bdn-lb-admin__slug-note { color: #767676; font-style: italic; }
+
+.bdn-lb-admin__composer-actions { display: flex; align-items: center; gap: .6rem; }
+.bdn-lb-admin__publish-status { font-size: .8125rem; color: #2c7a2c; }
+.bdn-lb-admin__error { color: var(--lb-red); }
+
+/* Entry list */
+.bdn-lb-admin__entries { border: 1px solid var(--lb-border); border-radius: var(--lb-radius); background: #fff; }
+.bdn-lb-admin__entries h4 { margin: 0; padding: .75rem .9rem; border-bottom: 1px solid var(--lb-border); font-size: .8125rem; text-transform: uppercase; letter-spacing: .04em; color: #50575e; }
+.bdn-lb-admin__count { font-weight: 400; color: #767676; }
+
+.bdn-lb-admin__entry {
+  padding: .8rem .9rem;
+  border-bottom: 1px solid var(--lb-border);
+  font-size: .8125rem;
+}
+.bdn-lb-admin__entry:last-child { border-bottom: none; }
+.bdn-lb-admin__entry-meta { display: flex; align-items: center; gap: .5rem; color: #767676; margin-bottom: .3rem; }
+.bdn-lb-admin__entry-title { display: block; margin-bottom: .25rem; font-size: .875rem; }
+.bdn-lb-admin__entry-body { color: #1a1a1a; line-height: 1.5; }
+.bdn-lb-admin__entry-body p { margin: .25rem 0; }
+
+.bdn-lb-admin__entry-urls {
+  margin-top: .5rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  font-size: .75rem;
+}
+.bdn-lb-admin__entry-urls a {
+  color: #0073aa;
+  text-decoration: none;
+  font-family: monospace;
+  background: #f0f6fc;
+  padding: .15rem .4rem;
+  border-radius: 3px;
+  border: 1px solid #b3d3f5;
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bdn-lb-admin__entry-urls a:hover { text-decoration: underline; }
+.bdn-lb-admin__regen-slug { color: #0073aa !important; }
+.bdn-lb-admin__delete { color: var(--lb-red) !important; }
+
+.bdn-lb-label {
+  font-size: .6rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: #fff;
+  background: var(--lb-red);
+  padding: .1em .45em;
+  border-radius: 2px;
+}
+
+.bdn-lb-admin__loading,
+.bdn-lb-admin__empty { padding: 1rem; color: #767676; font-size: .8125rem; margin: 0; }
