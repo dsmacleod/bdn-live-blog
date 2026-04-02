@@ -360,6 +360,8 @@
       document.getElementById('bdn-lbc-caption').value = '';
       document.getElementById('bdn-lbc-credit').value  = '';
     });
+
+    ['bdn-lbc-headline', 'bdn-lbc-content'].forEach(id => {
       document.getElementById(id)?.addEventListener('input', updateSlugPreview);
     });
 
