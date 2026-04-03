@@ -117,3 +117,66 @@ add_action( 'save_post_' . BDN_Liveblog_Post_Type::CPT, function ( $post_id, WP_
     if ( get_post_meta( $post_id, '_bdn_lb_seo_slug', true ) ) return;
     BDN_Liveblog_Slug::get_entry_url( $post_id, $post->post_content, get_the_title( $post ) );
 }, 10, 2 );
+
+// ── NOTA SEO enrichment on entry publish ─────────────────────────────────────
+
+add_action( 'save_post_' . BDN_Liveblog_Post_Type::CPT, function ( $post_id, WP_Post $post ) {
+    if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) return;
+    if ( ! BDN_Liveblog_Nota::is_available() ) return;
+    if ( get_post_meta( $post_id, '_bdn_lb_meta_description', true ) ) return;
+
+    $text = $post->post_content;
+    $title = get_the_title( $post );
+    $full_text = $title ? $title . '. ' . $text : $text;
+
+    // Meta description
+    $desc_response = BDN_Liveblog_Nota::call( 'meta-description', $full_text );
+    if ( $desc_response ) {
+        $desc = BDN_Liveblog_Nota::extract_first( $desc_response, 'metaDescription' )
+             ?: BDN_Liveblog_Nota::extract_first( $desc_response, 'meta_description' )
+             ?: BDN_Liveblog_Nota::extract_first( $desc_response, 'description' );
+        if ( $desc ) {
+            update_post_meta( $post_id, '_bdn_lb_meta_description', sanitize_text_field( $desc ) );
+        }
+    }
+
+    // Keywords
+    $kw_response = BDN_Liveblog_Nota::call( 'keywords', $full_text );
+    if ( $kw_response ) {
+        $keywords = BDN_Liveblog_Nota::extract_all( $kw_response, 'keywords' );
+        if ( $keywords ) {
+            update_post_meta( $post_id, '_bdn_lb_keywords', implode( ', ', array_slice( $keywords, 0, 10 ) ) );
+        }
+    }
+
+    // Entities
+    $ent_response = BDN_Liveblog_Nota::call( 'entities', $full_text );
+    if ( $ent_response ) {
+        $entities = BDN_Liveblog_Nota::extract_all( $ent_response, 'entities' );
+        if ( $entities ) {
+            update_post_meta( $post_id, '_bdn_lb_entities', wp_json_encode( array_slice( $entities, 0, 20 ) ) );
+        }
+    }
+
+    // Suggested headline (if entry has no title)
+    if ( ! $title ) {
+        $hl_response = BDN_Liveblog_Nota::call( 'headlines', $text, [ 'count' => 1 ] );
+        if ( $hl_response ) {
+            $headline = BDN_Liveblog_Nota::extract_first( $hl_response, 'headlines' );
+            if ( $headline ) {
+                update_post_meta( $post_id, '_bdn_lb_suggested_headline', sanitize_text_field( $headline ) );
+            }
+        }
+    }
+
+    // Social-ready summary
+    $social_response = BDN_Liveblog_Nota::call( 'summary', $full_text );
+    if ( $social_response ) {
+        $social = BDN_Liveblog_Nota::extract_first( $social_response, 'summary' )
+               ?: BDN_Liveblog_Nota::extract_first( $social_response, 'summaries' );
+        if ( $social ) {
+            $social = mb_substr( $social, 0, 280 );
+            update_post_meta( $post_id, '_bdn_lb_social_summary', sanitize_text_field( $social ) );
+        }
+    }
+}, 20, 2 );

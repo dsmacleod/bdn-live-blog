@@ -149,6 +149,11 @@ class BDN_Liveblog_API {
             'entry_url'     => BDN_Liveblog_Slug::get_entry_url( $post->ID, $post->post_content, $title ),
             'anchor_url'    => BDN_Liveblog_Slug::get_anchor_url( $post->ID ),
             'seo_slug'      => get_post_meta( $post->ID, '_bdn_lb_seo_slug', true ),
+            'meta_description'    => get_post_meta( $post->ID, '_bdn_lb_meta_description', true ),
+            'keywords'            => get_post_meta( $post->ID, '_bdn_lb_keywords', true ),
+            'entities'            => json_decode( get_post_meta( $post->ID, '_bdn_lb_entities', true ) ?: '[]', true ),
+            'suggested_headline'  => get_post_meta( $post->ID, '_bdn_lb_suggested_headline', true ),
+            'social_summary'      => get_post_meta( $post->ID, '_bdn_lb_social_summary', true ),
         ];
     }
 

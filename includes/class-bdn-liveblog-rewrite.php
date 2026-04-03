@@ -75,7 +75,8 @@ class BDN_Liveblog_Rewrite {
         $parent_id   = (int) get_post_meta( $entry->ID, '_bdn_lb_parent_post', true );
         $parent_url  = $parent_id ? get_permalink( $parent_id ) : home_url();
         $parent_title = $parent_id ? get_the_title( $parent_id ) : get_bloginfo( 'name' );
-        $description = wp_trim_words( wp_strip_all_tags( $entry->post_content ), 30 );
+        $description = get_post_meta( $entry->ID, '_bdn_lb_meta_description', true )
+                       ?: wp_trim_words( wp_strip_all_tags( $entry->post_content ), 30 );
         $title       = get_the_title( $entry ) ?: wp_trim_words( wp_strip_all_tags( $entry->post_content ), 12 );
         $full_title  = $title . ' — ' . $parent_title . ' | Bangor Daily News';
         $published   = get_post_time( 'c', true, $entry );
@@ -106,6 +107,12 @@ class BDN_Liveblog_Rewrite {
 <meta property="article:author"         content="<?php echo esc_attr( $author_name ); ?>" />
 <?php if ( $og_image ) : ?>
 <meta property="og:image"              content="<?php echo esc_attr( $og_image ); ?>" />
+<?php endif; ?>
+
+<?php
+$keywords = get_post_meta( $entry->ID, '_bdn_lb_keywords', true );
+if ( $keywords ) : ?>
+<meta name="keywords" content="<?php echo esc_attr( $keywords ); ?>" />
 <?php endif; ?>
 
 <!-- Twitter Card -->
