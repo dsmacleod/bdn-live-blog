@@ -726,12 +726,14 @@
         <button class="bdn-lbc__act bdn-lbc__act--edit" data-id="${e.id}">Edit</button>
         <button class="bdn-lbc__act bdn-lbc__act--regen" data-id="${e.id}">&#x21BB; Slug</button>
         <button class="bdn-lbc__act bdn-lbc__act--delete" data-id="${e.id}">Delete</button>
+        ${e.social_summary?`<button class="bdn-lbc__act bdn-lbc__act--tweet" data-summary="${esc(e.social_summary)}" title="${esc(e.social_summary)}">&#x1F426; Copy tweet</button>`:''}
       </div>`;
     div.querySelector('.bdn-lbc__act--pin')?.addEventListener('click',()=>togglePin(e.id, !e.pinned));
     div.querySelector('.bdn-lbc__act--highlight')?.addEventListener('click',()=>toggleHighlight(e.id, !e.highlight));
     div.querySelector('.bdn-lbc__act--edit')?.addEventListener('click',()=>startEdit(e));
     div.querySelector('.bdn-lbc__act--regen')?.addEventListener('click',()=>regenSlug(e.id,div));
     div.querySelector('.bdn-lbc__act--delete')?.addEventListener('click',()=>deleteEntry(e.id));
+    div.querySelector('.bdn-lbc__act--tweet')?.addEventListener('click',function(){navigator.clipboard.writeText(this.dataset.summary).then(()=>{this.textContent='Copied!';setTimeout(()=>{this.innerHTML='&#x1F426; Copy tweet';},2000);});});
     return div;
   }
 

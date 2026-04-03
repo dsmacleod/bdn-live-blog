@@ -1026,6 +1026,10 @@
 }
 .bdn-lbc__embed-preview__remove:hover { background: var(--lb-red); }
 
+/* ── Social copy button ───────────────────────────────────────────────────── */
+.bdn-lbc__act--tweet { color: var(--lb-muted); }
+.bdn-lbc__act--tweet:hover { color: #1da1f2; }
+
 /* ══ Mobile ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   /* Reader entries — stack, hide time column */
