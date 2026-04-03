@@ -81,11 +81,25 @@ class BDN_Liveblog_Slug {
     }
 
     private static function generate( string $content, string $title ): string {
+        // Priority 1: Anthropic API
         $api_key = get_option( self::API_KEY_OPTION, '' );
         if ( $api_key ) {
             $ai = self::call_anthropic( $api_key, $content, $title );
             if ( $ai ) return self::sanitize_slug( $ai );
         }
+
+        // Priority 2: NOTA SUM API
+        if ( BDN_Liveblog_Nota::is_available() ) {
+            $full_text = $title ? $title . '. ' . $content : $content;
+            $response = BDN_Liveblog_Nota::call( 'slugs', $full_text );
+            if ( $response ) {
+                $slug = BDN_Liveblog_Nota::extract_first( $response, 'slugs' )
+                     ?: BDN_Liveblog_Nota::extract_first( $response, 'slug' );
+                if ( $slug ) return self::sanitize_slug( $slug );
+            }
+        }
+
+        // Priority 3: Local NLP
         return self::local_slug( $content, $title );
     }
 
