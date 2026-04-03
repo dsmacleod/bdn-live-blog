@@ -16,6 +16,9 @@ A live blog plugin for the Bangor Daily News. Built for WordPress 6.x with the b
 - **Live polling** — readers receive new entries automatically every 15 seconds while the blog is live; exponential backoff on connection failures with a visible "Connection lost" notice
 - **Status control** — flip between Live, Scheduled, and Ended from the composer header; no admin visit needed to end a blog
 - **Mobile-responsive** — entries stack on small screens, time column hides, composer fields adapt at 640px
+- **NOTA AI enrichment** — auto-generates SEO meta descriptions, keywords, and entities for each entry page on publish; suggests headlines for quick updates posted without one; generates tweet-ready summaries for one-click social sharing
+- **Story so far** — NOTA generates a narrative summary from all entries, shown to readers who arrive late; appears automatically once 3+ entries are published
+- **Smart slug fallback** — slug generation tries Claude first, then NOTA SUM, then local keyword extraction
 - **BDN design** — sharp corners, Publico Headline / Georgia type, BDN green author names, BDN red accents; matches the existing article page exactly
 
 ---
@@ -170,6 +173,7 @@ The plugin exposes endpoints under `/wp-json/bdn-liveblog/v1/`:
 | GET | `/status?post_id=X` | public | Get live status for a post |
 | POST | `/status` | editor | Set live status |
 | GET | `/me` | editor | Get current reporter's byline name and photo |
+| GET | `/summary?post_id=X` | public | NOTA-generated story-so-far summary |
 
 "Editor" means any WordPress user with the `edit_posts` capability.
 
@@ -203,3 +207,6 @@ The reporter needs to upload their photo at Users → Edit Profile → BDN Live 
 - Poll interval defaults to 15 seconds with exponential backoff on failure (15s → 30s → 60s → 120s max). Override the base interval via the `BDN_LB.poll_interval` JS variable (in milliseconds) by filtering `bdn_liveblog_js_config` or re-localizing the script.
 - Slug regeneration is rate-limited to one API call per 30 seconds per entry via a WordPress transient.
 - All REST responses include `entry_url`, `anchor_url`, `seo_slug`, and `highlight` fields so external consumers (apps, aggregators) can link to individual entries and filter key moments.
+- NOTA SUM API integration reads credentials from the existing Nota WordPress plugin options (`nota_api_url`, `nota_api_key`). No additional configuration needed if the Nota plugin is already installed.
+- On entry publish, the plugin calls NOTA for meta descriptions, keywords, entities, headlines (for untitled entries), and social summaries. Results are cached in post meta and only generated once per entry.
+- The `/summary` endpoint aggregates all entries and generates a narrative via NOTA, cached for 5 minutes.
