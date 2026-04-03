@@ -21,6 +21,7 @@
   const STOP = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','by','from','is','was','are','were']);
   function naiveSlug(t){ return t.toLowerCase().replace(/<[^>]+>/g,'').split(/\s+/).map(w=>w.replace(/[^a-z0-9]/g,'')).filter(w=>w&&!STOP.has(w)).slice(0,7).join('-').slice(0,60); }
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function decodeEntities(s){ const el=document.createElement('textarea'); el.innerHTML=s; return el.value; }
   function sanitizeHtml(html) {
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
@@ -176,7 +177,7 @@
         </div>
         <div class="bdn-lb-body">
           <div class="bdn-lb-meta">${entry.pinned?'<span class="bdn-lb-pin-badge">Pinned</span>':''}${entry.highlight?'<span class="bdn-lb-highlight-badge">Key moment</span>':''}${entry.label?`<span class="bdn-lb-label">${esc(entry.label)}</span>`:''}</div>
-          ${entry.title?`<h2 class="bdn-lb-entry-title">${esc(entry.title)}</h2>`:''}
+          ${entry.title?`<h2 class="bdn-lb-entry-title">${esc(decodeEntities(entry.title))}</h2>`:''}
           ${entry.image_url?`<figure class="bdn-lb-figure">
             <img src="${esc(entry.image_url)}"
                  ${entry.image_srcset?`srcset="${esc(entry.image_srcset)}" sizes="(max-width:600px) 100vw, 600px"`:''}
@@ -736,7 +737,7 @@
         <span class="bdn-lbc__entry-time">${fmtTime(e.published)}</span>
         <span class="bdn-lbc__entry-byline">${esc(e.byline)}</span>
       </div>
-      ${e.title?`<strong class="bdn-lbc__entry-title">${esc(e.title)}</strong>`:''}
+      ${e.title?`<strong class="bdn-lbc__entry-title">${esc(decodeEntities(e.title))}</strong>`:''}
 
       <div class="bdn-lbc__entry-body">${sanitizeHtml(e.content)}</div>
       <div class="bdn-lbc__entry-actions">
