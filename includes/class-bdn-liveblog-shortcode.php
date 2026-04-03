@@ -37,6 +37,14 @@ class BDN_Liveblog_Shortcode {
                 <button class="bdn-lb-tab" data-filter="highlights">Key moments <span class="bdn-lb-tab__count"></span></button>
             </div>
 
+            <div class="bdn-lb-summary" style="display:none">
+                <div class="bdn-lb-summary__header">
+                    <span class="bdn-lb-summary__label">Story so far</span>
+                    <button class="bdn-lb-summary__close" aria-label="Close">&times;</button>
+                </div>
+                <p class="bdn-lb-summary__text"></p>
+            </div>
+
             <div class="bdn-lb-entries" role="feed">
                 <div class="bdn-lb-loading">
                     <span class="bdn-lb-spinner" aria-hidden="true"></span>

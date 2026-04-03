@@ -1049,6 +1049,46 @@
   font-style: normal;
 }
 
+/* ── Story so far summary ─────────────────────────────────────────────────── */
+.bdn-lb-summary {
+  border: 1px solid var(--lb-border);
+  border-left: 3px solid var(--lb-red);
+  background: #fafafa;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0;
+}
+.bdn-lb-summary__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+.bdn-lb-summary__label {
+  font-family: var(--lb-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lb-red);
+}
+.bdn-lb-summary__close {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--lb-muted);
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+.bdn-lb-summary__close:hover { color: var(--lb-text); }
+.bdn-lb-summary__text {
+  font-family: var(--lb-font-body);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--lb-text);
+  margin: 0;
+}
+
 /* ══ Mobile ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   /* Reader entries — stack, hide time column */

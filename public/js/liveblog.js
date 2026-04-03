@@ -137,6 +137,26 @@
     }
     updateHighlightCount();
 
+    // ── Story so far summary ────────────────────────────────────────────────
+    const summaryEl = widget.querySelector('.bdn-lb-summary');
+    const summaryText = widget.querySelector('.bdn-lb-summary__text');
+    const summaryClose = widget.querySelector('.bdn-lb-summary__close');
+
+    function fetchSummary() {
+      api(`summary?post_id=${postId}`).then(data => {
+        if (data.summary && data.entry_count >= 3) {
+          summaryText.textContent = data.summary;
+          summaryEl.style.display = '';
+        }
+      }).catch(() => {});
+    }
+
+    setTimeout(fetchSummary, 2000);
+
+    summaryClose?.addEventListener('click', () => {
+      summaryEl.style.display = 'none';
+    });
+
     function buildEntryEl(entry, isNew) {
       const d=new Date(entry.published);
       const hour=d.toLocaleTimeString('en-US',{hour:'numeric',hour12:true}).replace(/\s?(AM|PM)/i,'');
