@@ -162,8 +162,6 @@ class BDN_Liveblog_API {
             'meta_description'    => get_post_meta( $post->ID, '_bdn_lb_meta_description', true ),
             'keywords'            => get_post_meta( $post->ID, '_bdn_lb_keywords', true ),
             'entities'            => json_decode( get_post_meta( $post->ID, '_bdn_lb_entities', true ) ?: '[]', true ),
-            'suggested_headline'  => get_post_meta( $post->ID, '_bdn_lb_suggested_headline', true ),
-            'social_summary'      => get_post_meta( $post->ID, '_bdn_lb_social_summary', true ),
         ];
     }
 

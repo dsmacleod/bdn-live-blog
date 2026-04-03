@@ -158,25 +158,4 @@ add_action( 'save_post_' . BDN_Liveblog_Post_Type::CPT, function ( $post_id, WP_
         }
     }
 
-    // Suggested headline (if entry has no title)
-    if ( ! $title ) {
-        $hl_response = BDN_Liveblog_Nota::call( 'headlines', $text, [ 'count' => 1 ] );
-        if ( $hl_response ) {
-            $headline = BDN_Liveblog_Nota::extract_first( $hl_response, 'headlines' );
-            if ( $headline ) {
-                update_post_meta( $post_id, '_bdn_lb_suggested_headline', sanitize_text_field( $headline ) );
-            }
-        }
-    }
-
-    // Social-ready summary
-    $social_response = BDN_Liveblog_Nota::call( 'summary', $full_text );
-    if ( $social_response ) {
-        $social = BDN_Liveblog_Nota::extract_first( $social_response, 'summary' )
-               ?: BDN_Liveblog_Nota::extract_first( $social_response, 'summaries' );
-        if ( $social ) {
-            $social = mb_substr( $social, 0, 280 );
-            update_post_meta( $post_id, '_bdn_lb_social_summary', sanitize_text_field( $social ) );
-        }
-    }
 }, 20, 2 );
