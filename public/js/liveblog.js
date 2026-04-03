@@ -718,6 +718,7 @@
         <span class="bdn-lbc__entry-byline">${esc(e.byline)}</span>
       </div>
       ${e.title?`<strong class="bdn-lbc__entry-title">${esc(e.title)}</strong>`:''}
+      ${!e.title&&e.suggested_headline?`<div class="bdn-lbc__entry-suggestion"><span class="bdn-lbc__entry-suggestion-label">Suggested headline:</span> <button class="bdn-lbc__act bdn-lbc__act--use-headline" data-id="${e.id}" data-headline="${esc(e.suggested_headline)}">${esc(e.suggested_headline)} — Use this</button></div>`:''}
       <div class="bdn-lbc__entry-body">${sanitizeHtml(e.content)}</div>
       <div class="bdn-lbc__entry-actions">
         <a href="${esc(e.entry_url||e.anchor_url||'#')}" target="_blank" class="bdn-lbc__entry-url">${esc(e.seo_slug||'#'+e.id)}</a>
@@ -734,6 +735,13 @@
     div.querySelector('.bdn-lbc__act--regen')?.addEventListener('click',()=>regenSlug(e.id,div));
     div.querySelector('.bdn-lbc__act--delete')?.addEventListener('click',()=>deleteEntry(e.id));
     div.querySelector('.bdn-lbc__act--tweet')?.addEventListener('click',function(){navigator.clipboard.writeText(this.dataset.summary).then(()=>{this.textContent='Copied!';setTimeout(()=>{this.innerHTML='&#x1F426; Copy tweet';},2000);});});
+    div.querySelector('.bdn-lbc__act--use-headline')?.addEventListener('click', async function() {
+      try {
+        await api(`entries/${this.dataset.id}`, { method: 'POST', body: JSON.stringify({ title: this.dataset.headline }) });
+        loadComposerEntries();
+        flash('Headline applied.');
+      } catch(e) { alert('Failed: ' + e.message); }
+    });
     return div;
   }
 

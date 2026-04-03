@@ -1030,6 +1030,25 @@
 .bdn-lbc__act--tweet { color: var(--lb-muted); }
 .bdn-lbc__act--tweet:hover { color: #1da1f2; }
 
+/* ── Suggested headline ───────────────────────────────────────────────────── */
+.bdn-lbc__entry-suggestion {
+  font-family: var(--lb-font-ui);
+  font-size: 0.75rem;
+  color: var(--lb-muted);
+  font-style: italic;
+  margin-bottom: 0.25rem;
+}
+.bdn-lbc__entry-suggestion-label {
+  font-weight: 700;
+  font-style: normal;
+  color: #8a6d00;
+}
+.bdn-lbc__act--use-headline {
+  color: var(--lb-green);
+  text-decoration: underline;
+  font-style: normal;
+}
+
 /* ══ Mobile ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
   /* Reader entries — stack, hide time column */
