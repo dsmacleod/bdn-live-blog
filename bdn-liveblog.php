@@ -20,6 +20,7 @@ require_once BDN_LIVEBLOG_DIR . 'includes/class-bdn-liveblog-api.php';
 require_once BDN_LIVEBLOG_DIR . 'includes/class-bdn-liveblog-rewrite.php';
 require_once BDN_LIVEBLOG_DIR . 'includes/class-bdn-liveblog-shortcode.php';
 require_once BDN_LIVEBLOG_DIR . 'includes/class-bdn-liveblog-profiles.php';
+require_once BDN_LIVEBLOG_DIR . 'includes/class-bdn-liveblog-nota.php';
 require_once BDN_LIVEBLOG_DIR . 'admin/class-bdn-liveblog-admin.php';
 
 // ── Activation / deactivation ─────────────────────────────────────────────────
