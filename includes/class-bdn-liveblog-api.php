@@ -75,6 +75,16 @@ class BDN_Liveblog_API {
                 'status'  => [ 'required' => true, 'type' => 'string', 'enum' => [ 'live', 'ended', 'scheduled' ] ],
             ],
         ]);
+
+        // GET /summary?post_id=X — AI-generated "story so far" from all entries
+        register_rest_route( self::NS, '/summary', [
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => [ __CLASS__, 'get_summary' ],
+            'permission_callback' => '__return_true',
+            'args'                => [
+                'post_id' => [ 'required' => true, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
+            ],
+        ]);
     }
 
     // ── Permissions ────────────────────────────────────────────────────────────
@@ -395,6 +405,62 @@ class BDN_Liveblog_API {
 
     // ── Pin helper ─────────────────────────────────────────────────────────────
     // Only one entry per parent post can be pinned at a time.
+
+    // ── GET /summary ──────────────────────────────────────────────────────────
+
+    public static function get_summary( WP_REST_Request $req ) {
+        $post_id = $req->get_param( 'post_id' );
+
+        if ( ! BDN_Liveblog_Nota::is_available() ) {
+            return new WP_Error( 'nota_unavailable', 'NOTA API not configured.', [ 'status' => 503 ] );
+        }
+
+        $cache_key = 'bdn_lb_summary_' . $post_id;
+        $cached = get_transient( $cache_key );
+        if ( $cached !== false ) {
+            return new WP_REST_Response( $cached, 200 );
+        }
+
+        $entries = get_posts( [
+            'post_type'      => BDN_Liveblog_Post_Type::CPT,
+            'posts_per_page' => 50,
+            'post_status'    => 'publish',
+            'orderby'        => 'date',
+            'order'          => 'ASC',
+            'meta_query'     => [
+                [ 'key' => '_bdn_lb_parent_post', 'value' => $post_id, 'type' => 'NUMERIC' ],
+            ],
+        ] );
+
+        if ( empty( $entries ) ) {
+            return new WP_REST_Response( [ 'summary' => '', 'entry_count' => 0 ], 200 );
+        }
+
+        $combined = '';
+        foreach ( $entries as $entry ) {
+            $time = get_post_time( 'g:i A', false, $entry );
+            $text = wp_strip_all_tags( $entry->post_content );
+            $title = get_the_title( $entry );
+            $combined .= $time . ': ' . ( $title ? $title . '. ' : '' ) . $text . "\n\n";
+        }
+
+        $response = BDN_Liveblog_Nota::call( 'summary', $combined );
+        if ( ! $response ) {
+            return new WP_Error( 'nota_failed', 'Summary generation failed.', [ 'status' => 502 ] );
+        }
+
+        $summary = BDN_Liveblog_Nota::extract_first( $response, 'summary' )
+                ?: BDN_Liveblog_Nota::extract_first( $response, 'summaries' );
+
+        $result = [
+            'summary'     => $summary,
+            'entry_count' => count( $entries ),
+        ];
+
+        set_transient( $cache_key, $result, 300 );
+
+        return new WP_REST_Response( $result, 200 );
+    }
 
     private static function set_pinned( int $entry_id, int $pin, int $parent_id ) {
         if ( $pin ) {
