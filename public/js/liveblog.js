@@ -33,7 +33,17 @@
     });
     return tmp.innerHTML;
   }
-  function fmtTime(iso){ const d=new Date(iso); return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true})+' · '+d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+  const AP_MONTHS_SHORT=['Jan.','Feb.','March','April','May','June','July','Aug.','Sept.','Oct.','Nov.','Dec.'];
+  function fmtTime(iso){
+    const d=new Date(iso);
+    const mon=AP_MONTHS_SHORT[d.getMonth()];
+    const day=d.getDate();
+    const yr=d.getFullYear();
+    const h=d.getHours()%12||12;
+    const m=String(d.getMinutes()).padStart(2,'0');
+    const ap=d.getHours()<12?'a.m.':'p.m.';
+    return `${mon} ${day}, ${yr}, ${h}:${m} ${ap}`;
+  }
 
   // ══ Reader widget ══════════════════════════════════════════════════════════
 
@@ -73,7 +83,7 @@
         currentPage = page; totalPages = data.total_pages||1;
         loadMoreBtn.style.display = currentPage < totalPages ? 'block' : 'none';
         if (initial && !data.entries.length) entriesEl.innerHTML = '<p class="bdn-lb-empty">No entries yet. Check back soon.</p>';
-        updatedEl.textContent = 'Updated '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+        const _now=new Date(); const _h=_now.getHours()%12||12; const _m=String(_now.getMinutes()).padStart(2,'0'); const _ap=_now.getHours()<12?'a.m.':'p.m.'; updatedEl.textContent='Updated '+_h+':'+_m+' '+_ap;
       }).catch(()=>{ if(initial) entriesEl.innerHTML='<p class="bdn-lb-empty">Could not load entries.</p>'; });
     }
 
@@ -87,7 +97,7 @@
         pollFailures = 0;
         if (connErrorEl) { connErrorEl.style.display = 'none'; connErrorEl.textContent = ''; }
         (data.entries||[]).forEach(e => { if(e.timestamp>latestTimestamp) latestTimestamp=e.timestamp; prependEntry(e); });
-        updatedEl.textContent = 'Updated '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+        const _now=new Date(); const _h=_now.getHours()%12||12; const _m=String(_now.getMinutes()).padStart(2,'0'); const _ap=_now.getHours()<12?'a.m.':'p.m.'; updatedEl.textContent='Updated '+_h+':'+_m+' '+_ap;
         fetchStatus();
       }).catch(() => {
         pollFailures++;
@@ -160,23 +170,27 @@
 
     function buildEntryEl(entry, isNew) {
       const d=new Date(entry.published);
-      const hour=d.toLocaleTimeString('en-US',{hour:'numeric',hour12:true}).replace(/\s?(AM|PM)/i,'');
+
+      // AP-style months — uses shared AP_MONTHS_SHORT defined above
+      const month=AP_MONTHS_SHORT[d.getMonth()];
+      const day=d.getDate();
+      const year=d.getFullYear();
+      const hour12=d.getHours()%12||12;
       const mins=String(d.getMinutes()).padStart(2,'0');
-      const ampm=d.toLocaleTimeString('en-US',{hour:'numeric',hour12:true}).match(/(AM|PM)/i)?.[0]||'';
+      // AP style: lowercase a.m./p.m.
+      const ampm=d.getHours()<12?'a.m.':'p.m.';
+      const timeStr=`${month} ${day}, ${year}, ${hour12}:${mins} ${ampm}`;
+
       const shareUrl=entry.entry_url||entry.anchor_url||`${location.href}#entry-${entry.id}`;
       const el=document.createElement('article');
       el.className='bdn-lb-entry'+(isNew?' is-new':'')+(entry.pinned?' is-pinned':'')+(entry.highlight?' is-highlight':'');
       el.id='entry-'+entry.id;
       el.dataset.entryId=entry.id;
       el.innerHTML=`
-        <div class="bdn-lb-time-col" aria-hidden="true">
-          <time class="bdn-lb-time" datetime="${esc(entry.published)}">
-            <span class="hour">${esc(hour)}:${esc(mins)}</span>
-            <span class="ampm">${esc(ampm)}</span>
-          </time>
-        </div>
         <div class="bdn-lb-body">
-          <div class="bdn-lb-meta">${entry.pinned?'<span class="bdn-lb-pin-badge">Pinned</span>':''}${entry.highlight?'<span class="bdn-lb-highlight-badge">Key moment</span>':''}${entry.label?`<span class="bdn-lb-label">${esc(entry.label)}</span>`:''}</div>
+          <div class="bdn-lb-meta">
+            <time class="bdn-lb-time" datetime="${esc(entry.published)}">${esc(timeStr)}</time>${entry.pinned?'<span class="bdn-lb-pin-badge">Pinned</span>':''}${entry.highlight?'<span class="bdn-lb-highlight-badge">Key moment</span>':''}${entry.label?`<span class="bdn-lb-label">${esc(entry.label)}</span>`:''}
+          </div>
           ${entry.title?`<h2 class="bdn-lb-entry-title">${esc(decodeEntities(entry.title))}</h2>`:''}
           ${entry.image_url?`<figure class="bdn-lb-figure">
             <img src="${esc(entry.image_url)}"

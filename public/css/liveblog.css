@@ -1,13 +1,11 @@
 /* ── BDN Live Blog — public styles ────────────────────────────────────────── */
 
 /*
- * Typography matches bangordailynews.com exactly:
- *   Headlines  → Publico Headline (BDN display face) → Georgia fallback
- *   Body copy  → Charter / Georgia (BDN body serif, ~17px / 1.7lh)
- *   UI chrome  → Helvetica Neue / Arial (BDN's sans for labels, bylines, nav)
- *   Author name → bold, #1a5936 (BDN's dark green)
- *   Corners    → sharp (0px radius) — BDN uses no rounded corners in article UI
- *   Dividers   → 1px #e0e0e0 rules, thick 3px black top-rule for section headers
+ * Typography:
+ *   All text      → Libre Franklin (Google Fonts, 400/500/600/700)
+ *   Author name   → bold, #1a5936 (BDN's dark green)
+ *   Corners       → sharp (0px radius) — BDN uses no rounded corners in article UI
+ *   Dividers      → 1px #e0e0e0 rules, thick 3px black top-rule for section headers
  */
 
 :root {
@@ -17,9 +15,11 @@
   --lb-muted:     #767676;
   --lb-border:    #e0e0e0;
   --lb-bg:        #ffffff;
-  --lb-font-head: 'Publico Headline', Georgia, 'Times New Roman', serif;
-  --lb-font-body: Charter, Georgia, 'Times New Roman', serif;
-  --lb-font-ui:   'Helvetica Neue', Arial, sans-serif;
+  --lb-font:      'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
+  /* Keep legacy vars pointing to the same family so nothing breaks */
+  --lb-font-head: 'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
+  --lb-font-body: 'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
+  --lb-font-ui:   'Libre Franklin', 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* ── Container ─────────────────────────────────────────────────────────────── */
@@ -98,11 +98,9 @@
 
 /* ── Entry ─────────────────────────────────────────────────────────────────── */
 .bdn-lb-entry {
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 0 1.25rem;
+  display: block;
   border-bottom: 1px solid var(--lb-border);
-  padding: 1.4rem 0;
+  padding: 1.25rem 0;
 }
 .bdn-lb-entry.is-new {
   animation: lb-slide-in 0.3s ease-out;
@@ -112,35 +110,18 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Time column */
-.bdn-lb-time-col {
-  text-align: right;
-  padding-top: 2px;
-  border-right: 1px solid var(--lb-border);
-  padding-right: 1.25rem;
-}
+/* Inline timestamp — horizontal, NYT-style, sits at top of entry body */
 .bdn-lb-time {
-  display: block;
-  font-family: var(--lb-font-ui);
-  font-weight: 700;
+  display: inline;
+  font-family: var(--lb-font);
+  font-size: 0.75rem;
+  font-weight: 500;
   color: var(--lb-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  line-height: 1.3;
+  letter-spacing: 0.01em;
+  margin-right: 0.6rem;
 }
-.bdn-lb-time .hour {
-  display: block;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--lb-text);
-  letter-spacing: -0.01em;
-}
-.bdn-lb-time .ampm {
-  display: block;
-  font-size: 0.5625rem;
-  letter-spacing: 0.08em;
-  margin-top: 1px;
-}
+/* Hide the old vertical column (kept for any legacy markup) */
+.bdn-lb-time-col { display: none; }
 
 /* Label — e.g. BREAKING */
 .bdn-lb-label {
@@ -156,22 +137,32 @@
   margin-bottom: 0.3rem;
 }
 
-/* Entry headline — BDN display serif */
+/* Meta row — timestamp + badges flow inline, left-aligned */
+.bdn-lb-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.3rem;
+}
+
+/* Entry headline — Libre Franklin semi-bold */
 .bdn-lb-entry-title {
-  font-family: var(--lb-font-head);
-  font-size: 1.1875rem;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: -0.01em;
-  margin: 0 0 0.45rem;
+  font-family: var(--lb-font);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  margin: 0.35rem 0 0.4rem;
   color: var(--lb-text);
 }
 
-/* Body copy */
+/* Body copy — smaller, medium weight */
 .bdn-lb-content {
-  font-family: var(--lb-font-body);
-  font-size: 1.0625rem;
-  line-height: 1.7;
+  font-family: var(--lb-font);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  line-height: 1.65;
   color: var(--lb-text);
 }
 .bdn-lb-content p            { margin: 0 0 0.8em; }
@@ -275,13 +266,13 @@
 /* Article header */
 .bdn-lb-entry-page__header { margin-bottom: 1.25rem; }
 
-/* H1 — matches BDN's article headline: display serif, heavy, tight tracking */
+/* H1 — Libre Franklin semi-bold, slightly smaller than old serif display */
 .bdn-lb-entry-page__title {
-  font-family: var(--lb-font-head);
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  font-family: var(--lb-font);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
   margin: 0.35rem 0 1rem;
   color: var(--lb-text);
 }
@@ -327,8 +318,8 @@
 /* Article body */
 .bdn-lb-entry-page__content {
   font-family: var(--lb-font-body);
-  font-size: 1.0625rem;
-  line-height: 1.7;
+  font-size: 0.9375rem;
+  line-height: 1.65;
   margin-top: 1.5rem;
   color: var(--lb-text);
 }
@@ -395,7 +386,7 @@
 /*
  * Sits above the live blog entries on the story page.
  * Styled to feel like a native BDN editorial tool, not a WP admin widget.
- * Sharp corners, BDN red accent, serif body, same type scale as the article.
+ * Sharp corners, BDN red accent, Libre Franklin body, same type scale as the article.
  */
 
 #bdn-lb-composer-root { margin-bottom: 0; }
@@ -1058,13 +1049,9 @@
 
 /* ══ Mobile ═══════════════════════════════════════════════════════════════════ */
 @media (max-width: 640px) {
-  /* Reader entries — stack, hide time column */
+  /* Reader entries — already block layout, no grid to override */
   .bdn-lb-entry {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  .bdn-lb-time-col {
-    display: none;
+    padding: 1rem 0;
   }
 
   /* Composer split rows — stack */
