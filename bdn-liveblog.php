@@ -4,7 +4,8 @@
  * Plugin URI:  https://bangordailynews.com
  * Description: Live blog plugin for the Bangor Daily News. Enable in the block editor sidebar, then post entries directly from the public story URL.
  * Version:     1.2.1
- * Author:      Michael Shepherd/Bangor Daily News
+ * Author:      Mike Shepherd
+ * Author URI:  https://github.com/mikeshepherdme
  * Text Domain: bdn-liveblog
  */
 
