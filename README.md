@@ -46,6 +46,19 @@ No screenshots are committed to this repo yet. The dev site with the plugin inst
 
 ---
 
+## What's new in 1.2.7
+
+Bug-fix bundle focused on the composer. These were found and verified end-to-end against Newspack staging with a Playwright harness (`tests/browser/`).
+
+- **Inline photo upload works under Newspack hardening** — `/wp/v2/media` is blocked for Editors on hardened Newspack installs with a 403 "not allowed to create posts as this user," even when the same user can upload through the Media Library modal. The plugin now owns a `POST /wp-json/bdn-liveblog/v1/upload-inline-image` endpoint that gates on the same `edit_posts` check as every other write. JPEG/PNG/GIF/WebP accepted.
+- **Composer entries render their photo** — the reader widget has always shown the featured image on an entry; the editor-side entry list was silently dropping it. The composer list now renders the figure (and caption/credit) so you can confirm what was attached.
+- **Timestamp + byline moved below the body** — the top meta row kept only the label/pin badge. Timestamp and byline now appear in a footer row under the entry body for a scan-friendlier feed.
+- **"Use this photo" button visible on Newspack** — the media modal was rendering with an extra `.search-form` class leaking onto `.media-toolbar-primary`, which triggered the theme's absolute-positioned search-submit styling and pushed the primary action button out of the modal. Scoped CSS override neutralizes those rules inside `.media-modal` only.
+- **Cache poisoning fixed** — the `/entries` REST endpoint previously keyed its 30s transient on `post_id` + `page` only. A reader hitting the "Key moments" tab and a reader loading the full feed would race for the same cache key, so within the TTL window different readers could see different subsets. Cache key now includes `highlights_only`; every variant is tracked in an index so writes invalidate all of them. Added `Cache-Control: no-store` on the response so upstream caches can't replay one reader's view to another.
+- **Link button inserts into the editor, not next to the input** — when the toolbar button was clicked without a saved selection, the generated `<a>` was being inserted into the link bar wrapper instead of the editor. Switched to `mousedown` + `preventDefault` so the editor keeps focus, and fall back to placing the caret at the end of the editor if nothing is saved.
+- **Media modal diagnostics** — when the WP media frame opens, a `[BDN Liveblog] media modal diagnostics` group is logged to DevTools console with modal/toolbar/button rects, computed styles, and the topmost element at the button center. Makes future theme-CSS conflicts quick to diagnose.
+- **Fixed a syntax error shipped in 1.2.4** — an earlier diagnostics patch left the `mediaFrame.on('select', ...)` handler dangling, producing `Unexpected token ')'` at parse time. When the script fails to parse, the entire IIFE fails to run, which means no composer, no photo button, no link button, no REST polling. If you ever see multiple unrelated composer features break at once, suspect a parse error first (check DevTools console).
+
 ## What's new in 1.2.1
 
 - **Typography refresh** — entries now render in Libre Franklin (loaded from Google Fonts) across the whole widget for a cleaner, more consistent look. Previous releases mixed Publico Headline, Charter, and Helvetica Neue; the widget now uses a single family.

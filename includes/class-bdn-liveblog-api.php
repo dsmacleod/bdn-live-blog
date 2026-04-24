@@ -85,6 +85,50 @@ class BDN_Liveblog_API {
                 'post_id' => [ 'required' => true, 'type' => 'integer', 'sanitize_callback' => 'absint' ],
             ],
         ]);
+
+        // POST /upload-inline-image — sideload an inline image from the composer
+        // into the media library. Exists because Newspack/hardened WP often
+        // blocks /wp/v2/media for Editors with a 403 rest_cannot_create, even
+        // when the same user can upload via the Media Library modal. We gate
+        // on our own edit_posts check (same as every other write route).
+        register_rest_route( self::NS, '/upload-inline-image', [
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => [ __CLASS__, 'upload_inline_image' ],
+            'permission_callback' => [ __CLASS__, 'can_edit' ],
+        ]);
+    }
+
+    // ── POST /upload-inline-image ──────────────────────────────────────────────
+
+    public static function upload_inline_image( WP_REST_Request $req ) {
+        if ( ! current_user_can( 'upload_files' ) ) {
+            return new WP_Error( 'rest_forbidden', 'You do not have permission to upload files.', [ 'status' => 403 ] );
+        }
+        $files = $req->get_file_params();
+        if ( empty( $files['file'] ) ) {
+            return new WP_Error( 'no_file', 'No file uploaded.', [ 'status' => 400 ] );
+        }
+        // WordPress needs these for media_handle_sideload.
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        // Allow only image types.
+        $file     = $files['file'];
+        $mime     = $file['type'] ?? '';
+        $allowed  = [ 'image/jpeg', 'image/png', 'image/gif', 'image/webp' ];
+        if ( ! in_array( $mime, $allowed, true ) ) {
+            return new WP_Error( 'bad_mime', 'Only JPEG, PNG, GIF, and WebP images are allowed.', [ 'status' => 400 ] );
+        }
+
+        $_FILES = [ 'file' => $file ];
+        $attachment_id = media_handle_upload( 'file', 0 );
+        if ( is_wp_error( $attachment_id ) ) {
+            return new WP_Error( 'upload_failed', $attachment_id->get_error_message(), [ 'status' => 500 ] );
+        }
+
+        $url = wp_get_attachment_url( $attachment_id );
+        return new WP_REST_Response( [ 'id' => (int) $attachment_id, 'url' => $url ], 201 );
     }
 
     // ── Permissions ────────────────────────────────────────────────────────────
@@ -184,25 +228,56 @@ class BDN_Liveblog_API {
         return $content;
     }
 
-    private static function entries_cache_key( int $post_id, int $page ): string {
-        return "bdn_lb_entries_{$post_id}_{$page}";
+    // Cache key must include every filter that changes the result set, otherwise
+    // the first caller's response gets served to readers asking for a different
+    // view (e.g. ?highlights_only=1 vs. full list) within the 30s TTL.
+    private static function entries_cache_key( int $post_id, int $page, int $highlights_only = 0 ): string {
+        return "bdn_lb_entries_{$post_id}_{$page}_h{$highlights_only}";
+    }
+
+    // Track every cache key we've written for a given parent post so we can
+    // bust them all on write without hard-coding page/variant counts.
+    private static function entries_cache_index_key( int $post_id ): string {
+        return "bdn_lb_entries_idx_{$post_id}";
+    }
+
+    private static function remember_entries_cache_key( int $post_id, string $key ) {
+        $idx_key = self::entries_cache_index_key( $post_id );
+        $idx     = get_transient( $idx_key );
+        if ( ! is_array( $idx ) ) $idx = [];
+        if ( ! in_array( $key, $idx, true ) ) {
+            $idx[] = $key;
+            set_transient( $idx_key, $idx, HOUR_IN_SECONDS );
+        }
     }
 
     private static function bust_entries_cache( int $post_id ) {
+        $idx_key = self::entries_cache_index_key( $post_id );
+        $idx     = get_transient( $idx_key );
+        if ( is_array( $idx ) ) {
+            foreach ( $idx as $key ) delete_transient( $key );
+        }
+        delete_transient( $idx_key );
+        // Belt-and-braces for old unindexed keys from pre-1.2.2 deploys.
         for ( $i = 1; $i <= 10; $i++ ) {
-            delete_transient( self::entries_cache_key( $post_id, $i ) );
+            delete_transient( "bdn_lb_entries_{$post_id}_{$i}" );
+            delete_transient( "bdn_lb_entries_{$post_id}_{$i}_h0" );
+            delete_transient( "bdn_lb_entries_{$post_id}_{$i}_h1" );
         }
     }
 
     // ── GET /entries ───────────────────────────────────────────────────────────
 
     public static function get_entries( WP_REST_Request $req ) {
-        $post_id = $req->get_param( 'post_id' );
-        $after   = $req->get_param( 'after' );
-        $page    = max( 1, $req->get_param( 'page' ) );
+        $post_id         = $req->get_param( 'post_id' );
+        $after           = $req->get_param( 'after' );
+        $page            = max( 1, $req->get_param( 'page' ) );
+        $highlights_only = $req->get_param( 'highlights_only' ) ? 1 : 0;
+
+        $cache_key = self::entries_cache_key( $post_id, $page, $highlights_only );
 
         if ( $after == 0 ) {
-            $cached = get_transient( self::entries_cache_key( $post_id, $page ) );
+            $cached = get_transient( $cache_key );
             if ( $cached !== false ) {
                 return new WP_REST_Response( $cached, 200 );
             }
@@ -220,7 +295,7 @@ class BDN_Liveblog_API {
             ],
         ];
 
-        if ( $req->get_param( 'highlights_only' ) ) {
+        if ( $highlights_only ) {
             $args['meta_query'][] = [ 'key' => '_bdn_lb_highlight', 'value' => '1' ];
         }
 
@@ -240,10 +315,17 @@ class BDN_Liveblog_API {
         ];
 
         if ( $after == 0 ) {
-            set_transient( self::entries_cache_key( $post_id, $page ), $response_data, 30 );
+            set_transient( $cache_key, $response_data, 30 );
+            self::remember_entries_cache_key( $post_id, $cache_key );
         }
 
-        return new WP_REST_Response( $response_data, 200 );
+        $response = new WP_REST_Response( $response_data, 200 );
+        // Prevent upstream caches (Cloudflare, WP Rocket page cache, etc.) from
+        // re-serving one visitor's view — the 30s transient handles server-side
+        // reuse; every HTTP request should still hit PHP.
+        $response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+        $response->header( 'Pragma', 'no-cache' );
+        return $response;
     }
 
     // ── GET /entries/{id} ──────────────────────────────────────────────────────

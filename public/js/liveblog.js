@@ -355,14 +355,72 @@
     // Photo picker — uses WP Media Library (available on front-end when user is logged in
     // and wp_enqueue_media() has been called, which our plugin does for logged-in editors).
     let mediaFrame = null;
-    document.getElementById('bdn-lbc-photo-btn')?.addEventListener('click', () => {
-      if (!window.wp?.media) { alert('Media library not available. Please ensure you are logged in.'); return; }
+    const photoBtn = document.getElementById('bdn-lbc-photo-btn');
+    photoBtn?.addEventListener('click', () => {
+      if (!window.wp || !window.wp.media) {
+        console.error('[BDN Liveblog] wp.media not available', {
+          hasWp:       !!window.wp,
+          hasJquery:   !!window.jQuery,
+          canEdit:     CAN_EDIT,
+        });
+        flash(
+          window.jQuery
+            ? 'Media library did not load. Try refreshing the page.'
+            : 'Media library unavailable — jQuery is missing on this page. Contact your site admin.',
+          true
+        );
+        return;
+      }
       if (!mediaFrame) {
-        mediaFrame = wp.media({
-          title:    'Select or Upload Photo',
-          button:   { text: 'Use this photo' },
-          multiple: false,
-          library:  { type: 'image' },
+        try {
+          mediaFrame = wp.media({
+            title:    'Select or Upload Photo',
+            button:   { text: 'Use this photo' },
+            multiple: false,
+            library:  { type: 'image' },
+          });
+        } catch (err) {
+          console.error('[BDN Liveblog] wp.media() threw', err);
+          flash('Could not open media library: ' + (err.message || err), true);
+          return;
+        }
+        // Diagnostics: when the modal opens, dump the key DOM state so we can
+        // diagnose cases where the primary "Use this photo" button is missing
+        // on specific sites (e.g. Newspack). Readers: open DevTools → Console,
+        // click Add Photo, and share the [BDN Liveblog] dump.
+        mediaFrame.on('open', () => {
+          setTimeout(() => {
+            const modal    = document.querySelector('.media-modal');
+            const toolbar  = document.querySelector('.media-frame-toolbar');
+            const priBtn   = document.querySelector('.media-frame-toolbar .media-button.button-primary, .media-frame-toolbar .media-button-select');
+            const rect     = el => el ? el.getBoundingClientRect() : null;
+            const cs       = el => {
+              if (!el) return null;
+              const s = getComputedStyle(el);
+              return { display:s.display, visibility:s.visibility, position:s.position,
+                       top:s.top, right:s.right, bottom:s.bottom, left:s.left,
+                       width:s.width, height:s.height, zIndex:s.zIndex, transform:s.transform };
+            };
+            let transformedAncestor = null;
+            for (let el = modal?.parentElement; el && el !== document.documentElement; el = el.parentElement) {
+              const t = getComputedStyle(el).transform;
+              if (t && t !== 'none') { transformedAncestor = el.tagName + '.' + (el.className || ''); break; }
+            }
+            console.group('[BDN Liveblog] media modal diagnostics');
+            console.log('viewport:', { w: window.innerWidth, h: window.innerHeight });
+            console.log('modal present:',     !!modal,   'rect:', rect(modal),   'styles:', cs(modal));
+            console.log('toolbar present:',   !!toolbar, 'rect:', rect(toolbar), 'styles:', cs(toolbar));
+            console.log('primary button present:', !!priBtn, 'rect:', rect(priBtn), 'styles:', cs(priBtn));
+            console.log('ancestor with transform (breaks position:fixed):', transformedAncestor);
+            if (priBtn) {
+              const r = priBtn.getBoundingClientRect();
+              const inVp = r.width > 0 && r.height > 0 && r.x >= 0 && r.y >= 0 && r.x+r.width <= innerWidth && r.y+r.height <= innerHeight;
+              console.log('primary button inside viewport:', inVp);
+              const topEl = document.elementFromPoint(r.x + r.width/2, r.y + r.height/2);
+              console.log('topmost element at button center:', topEl?.tagName + '.' + (topEl?.className || ''), 'isButton:', topEl === priBtn || priBtn.contains(topEl));
+            }
+            console.groupEnd();
+          }, 200);
         });
         mediaFrame.on('select', () => {
           const att = mediaFrame.state().get('selection').first().toJSON();
@@ -431,10 +489,36 @@
       sel.addRange(savedRange);
     }
 
-    // B / I buttons
+    // Place the caret at the end of the editor (fallback when there is no saved selection).
+    function caretToEnd() {
+      editor.focus();
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      savedRange = range.cloneRange();
+    }
+
+    // Restore the saved selection into the editor, or place the caret at the end
+    // if nothing was saved. Always guarantees a live selection inside the editor.
+    function focusEditorWithRange() {
+      editor.focus();
+      if (!savedRange || !editor.contains(savedRange.startContainer)) {
+        caretToEnd();
+        return;
+      }
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      try { sel.addRange(savedRange); }
+      catch { caretToEnd(); }
+    }
+
+    // B / I buttons — use mousedown + preventDefault so editor keeps focus + selection.
     document.querySelectorAll('.bdn-lbc__tb-btn[data-cmd]').forEach(btn => {
       btn.addEventListener('mousedown', e => {
-        e.preventDefault(); // keep editor focus + selection
+        e.preventDefault();
         document.execCommand(btn.dataset.cmd, false, null);
       });
     });
@@ -444,13 +528,18 @@
     const linkUrl    = document.getElementById('bdn-lbc-link-url');
     const linkInsert = document.getElementById('bdn-lbc-link-insert');
     const linkCancel = document.getElementById('bdn-lbc-link-cancel');
+    const tbLinkBtn  = document.getElementById('bdn-lbc-tb-link');
+    const tbImgBtn   = document.getElementById('bdn-lbc-tb-img');
 
-    document.getElementById('bdn-lbc-tb-link')?.addEventListener('click', () => {
-      saveRange();
+    // mousedown+preventDefault preserves the editor's current selection;
+    // click then runs the open/close logic without the editor ever losing focus.
+    tbLinkBtn?.addEventListener('mousedown', e => { e.preventDefault(); saveRange(); });
+    tbLinkBtn?.addEventListener('click', () => {
       closeImgBar();
       const open = linkBar.style.display !== 'none';
       linkBar.style.display = open ? 'none' : 'flex';
       if (!open) {
+        if (!savedRange || !editor.contains(savedRange.startContainer)) caretToEnd();
         linkUrl.value = 'https://';
         linkUrl.focus();
         linkUrl.select();
@@ -464,25 +553,25 @@
     linkInsert?.addEventListener('click', () => {
       const url = linkUrl.value.trim();
       if (!url || url === 'https://') { closeLinkBar(); return; }
-      restoreRange();
+
+      focusEditorWithRange();
       const sel = window.getSelection();
-      if (sel && sel.rangeCount) {
-        if (!sel.isCollapsed) {
-          // Wrap selected text in <a>
-          document.execCommand('createLink', false, url);
-        } else {
-          // No selection — insert URL as link text
-          const a = document.createElement('a');
-          a.href = url;
-          a.textContent = url;
-          const range = sel.getRangeAt(0);
-          range.insertNode(a);
-          range.setStartAfter(a);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
+      if (!sel || !sel.rangeCount) { closeLinkBar(); return; }
+
+      if (!sel.isCollapsed) {
+        document.execCommand('createLink', false, url);
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.textContent = url;
+        const range = sel.getRangeAt(0);
+        range.insertNode(a);
+        range.setStartAfter(a);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
       }
+      savedRange = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
       closeLinkBar();
       updateSlugPreview();
     });
@@ -498,12 +587,15 @@
     const imgInsert = document.getElementById('bdn-lbc-img-insert');
     const imgCancel = document.getElementById('bdn-lbc-img-cancel');
 
-    document.getElementById('bdn-lbc-tb-img')?.addEventListener('click', () => {
-      saveRange();
+    tbImgBtn?.addEventListener('mousedown', e => { e.preventDefault(); saveRange(); });
+    tbImgBtn?.addEventListener('click', () => {
       closeLinkBar();
       const open = imgBar.style.display !== 'none';
       imgBar.style.display = open ? 'none' : 'flex';
-      if (!open) { imgFile.value = ''; }
+      if (!open) {
+        if (!savedRange || !editor.contains(savedRange.startContainer)) caretToEnd();
+        imgFile.value = '';
+      }
     });
 
     function closeImgBar() { imgBar.style.display = 'none'; }
@@ -515,25 +607,24 @@
       if (!file) { closeImgBar(); return; }
       const reader = new FileReader();
       reader.onload = evt => {
-        restoreRange();
+        focusEditorWithRange();
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount) { closeImgBar(); return; }
         const img = document.createElement('img');
         img.src = evt.target.result;
         img.alt = file.name.replace(/\.[^.]+$/, '');
         img.style.cssText = 'max-width:100%;height:auto;display:block;margin:6px 0';
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount) {
-          const range = sel.getRangeAt(0);
-          range.collapse(false);
-          range.insertNode(img);
-          // Move cursor after image
-          const br = document.createElement('br');
-          range.setStartAfter(img);
-          range.insertNode(br);
-          range.setStartAfter(br);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
+        const range = sel.getRangeAt(0);
+        range.collapse(false);
+        range.insertNode(img);
+        const br = document.createElement('br');
+        range.setStartAfter(img);
+        range.insertNode(br);
+        range.setStartAfter(br);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        savedRange = range.cloneRange();
         closeImgBar();
         updateSlugPreview();
       };
@@ -643,22 +734,31 @@
       try {
         const dataUrl  = img.src;
         const mime     = dataUrl.match(/data:([^;]+);/)?.[1] || 'image/jpeg';
-        const ext      = mime.split('/')[1] || 'jpg';
+        const ext      = (mime.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
         const filename = `liveblog-inline-${Date.now()}.${ext}`;
         const blob     = await (await fetch(dataUrl)).blob();
 
         const form = new FormData();
         form.append('file', blob, filename);
 
-        const res = await fetch('/wp-json/wp/v2/media', {
+        // Use our plugin endpoint instead of /wp/v2/media: Newspack/hardened WP
+        // can block the core endpoint for Editors even when they can upload via
+        // the Media Library modal. Our endpoint gates on the same edit_posts
+        // check every other write uses.
+        const res = await fetch(REST + 'upload-inline-image', {
           method:  'POST',
           headers: { 'X-WP-Nonce': NONCE },
           body:    form,
         });
-        if (!res.ok) { failures++; img.remove(); continue; }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          console.warn('BDN LiveBlog: inline image upload failed', res.status, err);
+          failures++;
+          img.remove();
+          continue;
+        }
         const data = await res.json();
-        const url  = data.source_url || data.guid?.rendered;
-        if (url) img.src = url; else { failures++; img.remove(); }
+        if (data.url) img.src = data.url; else { failures++; img.remove(); }
       } catch (e) {
         console.warn('BDN LiveBlog: inline image upload failed', e);
         failures++;
@@ -745,15 +845,23 @@
     div.className='bdn-lbc__entry'+(e.pinned?' bdn-lbc__entry--pinned':'')+(e.highlight?' bdn-lbc__entry--highlighted':''); div.dataset.id=e.id;
     const pinLabel=e.pinned?'&#x1F4CC; Pinned':'Pin';
     div.innerHTML=`
-      <div class="bdn-lbc__entry-meta">
+      ${(e.pinned||e.label)?`<div class="bdn-lbc__entry-meta">
         ${e.pinned?'<span class="bdn-lbc__pin-badge">Pinned</span>':''}
         ${e.label?`<span class="bdn-lbc__entry-label">${esc(e.label)}</span>`:''}
+      </div>`:''}
+      ${e.title?`<strong class="bdn-lbc__entry-title">${esc(decodeEntities(e.title))}</strong>`:''}
+      ${e.image_url?`<figure class="bdn-lbc__entry-figure">
+        <img src="${esc(e.image_thumb||e.image_url)}" alt="${esc(e.image_alt||'')}" class="bdn-lbc__entry-img" loading="lazy" />
+        ${(e.image_caption||e.image_credit)?`<figcaption class="bdn-lbc__entry-cap">
+          ${e.image_caption?`<span class="bdn-lbc__entry-cap-text">${esc(e.image_caption)}</span>`:''}
+          ${e.image_credit?`<span class="bdn-lbc__entry-cap-credit">${esc(e.image_credit)}</span>`:''}
+        </figcaption>`:''}
+      </figure>`:''}
+      <div class="bdn-lbc__entry-body">${sanitizeHtml(e.content)}</div>
+      <div class="bdn-lbc__entry-foot">
         <span class="bdn-lbc__entry-time">${fmtTime(e.published)}</span>
         <span class="bdn-lbc__entry-byline">${esc(e.byline)}</span>
       </div>
-      ${e.title?`<strong class="bdn-lbc__entry-title">${esc(decodeEntities(e.title))}</strong>`:''}
-
-      <div class="bdn-lbc__entry-body">${sanitizeHtml(e.content)}</div>
       <div class="bdn-lbc__entry-actions">
         <a href="${esc(e.entry_url||e.anchor_url||'#')}" target="_blank" class="bdn-lbc__entry-url">${esc(e.seo_slug||'#'+e.id)}</a>
         <button class="bdn-lbc__act bdn-lbc__act--highlight${e.highlight?' bdn-lbc__act--highlighted':''}" data-id="${e.id}">${e.highlight?'&#x2605; Key moment':'&#x2606; Key moment'}</button>

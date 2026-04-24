@@ -3,7 +3,7 @@
  * Plugin Name: BDN Live Blog
  * Plugin URI:  https://bangordailynews.com
  * Description: Live blog plugin for the Bangor Daily News. Enable in the block editor sidebar, then post entries directly from the public story URL.
- * Version:     1.2.1
+ * Version:     1.2.7
  * Author:      Mike Shepherd
  * Author URI:  https://github.com/mikeshepherdme
  * Text Domain: bdn-liveblog
@@ -11,7 +11,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'BDN_LIVEBLOG_VERSION', '1.2.1' );
+define( 'BDN_LIVEBLOG_VERSION', '1.2.7' );
 define( 'BDN_LIVEBLOG_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'BDN_LIVEBLOG_URL',     plugin_dir_url( __FILE__ ) );
 
@@ -67,10 +67,15 @@ add_action( 'wp_enqueue_scripts', function () {
         [],
         BDN_LIVEBLOG_VERSION
     );
+    // jQuery + media-editor deps ensure window.wp.media is usable when the
+    // composer's "Add photo" button fires on the front-end.
+    $lb_deps = current_user_can( 'edit_posts' )
+        ? [ 'jquery', 'media-editor' ]
+        : [];
     wp_enqueue_script(
         'bdn-liveblog',
         BDN_LIVEBLOG_URL . 'public/js/liveblog.js',
-        [],
+        $lb_deps,
         BDN_LIVEBLOG_VERSION,
         true
     );

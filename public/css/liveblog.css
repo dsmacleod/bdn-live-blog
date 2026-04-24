@@ -605,7 +605,17 @@
 }
 .bdn-lbc__entry-time { color: var(--lb-muted); font-size: 0.75rem; }
 .bdn-lbc__entry-byline { color: var(--lb-green); font-weight: 700; font-size: 0.75rem; }
+.bdn-lbc__entry-foot {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
 .bdn-lbc__entry-title { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; }
+.bdn-lbc__entry-figure { margin: 0.4rem 0; padding: 0; }
+.bdn-lbc__entry-img { max-width: 100%; height: auto; display: block; }
+.bdn-lbc__entry-cap { font-size: 0.75rem; color: var(--lb-muted); margin-top: 0.25rem; line-height: 1.35; }
+.bdn-lbc__entry-cap-text { margin-right: 0.4rem; }
+.bdn-lbc__entry-cap-credit { font-style: italic; }
 .bdn-lbc__entry-body { font-family: var(--lb-font-body); font-size: 0.9375rem; line-height: 1.55; color: var(--lb-text); }
 .bdn-lbc__entry-body p { margin: 0 0 0.4em; }
 
@@ -1098,4 +1108,41 @@
   .bdn-lbc__img-bar {
     flex-wrap: wrap;
   }
+}
+
+/* ── WordPress media modal: neutralize .search-form cascade ─────────────────
+ * On Newspack staging (and likely production) something adds the
+ * ".search-form" class to .media-toolbar-primary inside the media modal
+ * — probably a hook that's meant to target the site's search widget. The
+ * theme's ".search-form button" rule then absolute-positions any button
+ * inside (top:2; right:2; bottom:2; left:-128px), pushing the
+ * "Use this photo" primary action outside the modal and under the backdrop.
+ *
+ * We override with higher specificity scoped to the media modal. Applies
+ * whether or not the .search-form class is present — safe either way.
+ * ──────────────────────────────────────────────────────────────────────── */
+.media-modal .media-toolbar-primary.search-form,
+.media-modal .media-toolbar-secondary.search-form {
+  position: relative;
+}
+.media-modal .media-toolbar-primary > .media-button,
+.media-modal .media-toolbar-primary > .media-button-group,
+.media-modal .media-toolbar-secondary > .media-button,
+.media-modal .media-toolbar-secondary > .media-button-group,
+.media-modal .media-toolbar .button.media-button-select,
+.media-modal .media-toolbar .button.media-button {
+  position: static !important;
+  top:    auto !important;
+  right:  auto !important;
+  bottom: auto !important;
+  left:   auto !important;
+  float:  left  !important;
+  margin-top: 15px !important;
+}
+/* Re-apply core's float:right for the primary side so buttons end up on the
+   right edge of the toolbar as expected. */
+.media-modal .media-toolbar-primary > .media-button,
+.media-modal .media-toolbar-primary > .media-button-group {
+  float: left !important;
+  margin-left: 10px !important;
 }

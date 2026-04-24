@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>BDN Liveblog media modal fixture</title>
+<link rel="stylesheet" href="/media-views.css">
+<link rel="stylesheet" href="/liveblog.css">
+<style>
+  /* ── Hostile theme overrides that simulate Newspack / sticky headers /
+       common problem CSS seen in the wild on WP.com + Newspack sites.
+       These are the kinds of rules that break the media modal on front-end. */
+  html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+  body { background: #eee; }
+
+  /* #1: Sticky ad / header overlay with a high z-index */
+  .theme-sticky-ad {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 90px; background: orange; z-index: 999999;
+  }
+
+  /* #2: Theme CSS that tries to reset embedded iframes/buttons */
+  .theme-reset-buttons button { min-height: 0 !important; }
+
+  /* #3: Newspack-style overflow container that clips children */
+  .site-wrap { position: relative; overflow: hidden; min-height: 100vh; }
+
+  /* #4: Some themes apply transforms to body for animations, which breaks
+     position: fixed so the modal is positioned relative to body, not viewport.
+     Our CSS fix uses !important on .media-modal position to keep it fixed,
+     but transform on body still wins. Test that our 30px insets still render. */
+  /* body { transform: translateZ(0); } // enable to exercise this */
+</style>
+</head>
+<body class="wp-core-ui theme-reset-buttons">
+<div class="site-wrap">
+  <div class="theme-sticky-ad">sticky theme ad (z:999999)</div>
+  <main style="padding-top:120px">
+    <h1>Fake story page</h1>
+    <button id="open-picker" class="bdn-lbc__photo-btn">Add photo</button>
+  </main>
+</div>
+
+<!-- WordPress media modal markup, taken directly from wp.media's rendered
+     Select frame. Classes + structure match WP 6.x core exactly. -->
+<div id="modal-root" style="display:none">
+  <div class="media-modal-backdrop"></div>
+  <div tabindex="0" class="media-modal wp-core-ui">
+    <button type="button" class="media-modal-close"><span class="media-modal-icon"></span><span class="screen-reader-text">Close</span></button>
+    <div class="media-modal-content">
+      <div class="media-frame mode-select wp-core-ui hide-menu" role="region">
+        <div class="media-frame-title"><h1>Select or Upload Photo</h1></div>
+        <div class="media-frame-router">
+          <div class="media-router">
+            <a href="#" class="media-menu-item active">Upload files</a>
+            <a href="#" class="media-menu-item">Media Library</a>
+          </div>
+        </div>
+        <div class="media-frame-content">
+          <div class="attachments-browser">
+            <div class="attachments" style="padding:16px">[attachments grid]</div>
+          </div>
+        </div>
+        <div class="media-frame-toolbar">
+          <div class="media-toolbar">
+            <div class="media-toolbar-secondary"></div>
+            <div class="media-toolbar-primary">
+              <button type="button" class="button media-button button-primary button-large media-button-select" disabled="disabled">Use this photo</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Simulate wp.media opening/closing — adds the scoping class our CSS uses.
+  const modalRoot = document.getElementById('modal-root');
+  document.getElementById('open-picker').addEventListener('click', () => {
+    modalRoot.style.display = 'block';
+    document.body.classList.add('bdn-lb-media-open');
+    // Simulate selection after 100ms so the button becomes enabled, as wp.media does.
+    setTimeout(() => {
+      document.querySelector('.media-button-select').disabled = false;
+    }, 100);
+  });
+  document.querySelector('.media-modal-close').addEventListener('click', () => {
+    modalRoot.style.display = 'none';
+    document.body.classList.remove('bdn-lb-media-open');
+  });
+</script>
+</body>
+</html>
